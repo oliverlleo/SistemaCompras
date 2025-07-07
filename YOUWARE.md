@@ -49,6 +49,7 @@ const firebaseConfig = {
 - **SheetJS (XLSX.js)**: Processamento client-side de CSV/XLSX
 - **Mapeamento inteligente**: Sistema que identifica colunas por variações de nomes
 - **UTF-8**: Suporte completo a caracteres especiais
+- **Consolidação automática**: Itens duplicados são automaticamente agrupados
 
 ### Mapeamento de Colunas
 O sistema reconhece automaticamente colunas com nomes variados:
@@ -60,6 +61,31 @@ const headerVariations = {
   // ... outras variações
 };
 ```
+
+### Consolidação de Itens Duplicados
+O sistema automaticamente identifica e consolida itens duplicados:
+
+#### Como Funciona
+- **Identificação**: Itens são considerados iguais baseado no código e descrição (normalizada)
+- **Consolidação**: Quantidades são somadas automaticamente
+- **Preservação de dados**: Informações adicionais (altura, largura, cor, etc.) são preservadas
+- **Feedback visual**: Interface mostra quantos itens foram consolidados
+
+#### Exemplo de Consolidação
+```
+Antes:
+- Item A: código "123", descrição "Perfil", quantidade 10
+- Item A: código "123", descrição "Perfil", quantidade 5
+
+Depois:
+- Item A: código "123", descrição "Perfil", quantidade 15 (consolidado)
+```
+
+#### Regras de Consolidação
+- **Chave única**: baseada em código e descrição normalizados (sem acentos, espaços, caracteres especiais)
+- **Soma de quantidades**: todas as quantidades dos itens iguais são somadas
+- **Preservação de dados**: campos adicionais do item mais recente são mantidos se não existirem no item consolidado
+- **Histórico**: sistema marca itens como consolidados para auditoria
 
 ## Interface Dinâmica
 
@@ -152,3 +178,5 @@ window.PedidosApp.exportData() // Exportar dados para backup
 - **Arquivos grandes**: SheetJS processa até milhares de linhas
 - **Batch operations**: Firebase batch para múltiplos itens
 - **Lazy loading**: Componentes carregam sob demanda
+
+This file provides guidance to YOUWARE Agent (youware.com) when working with code in this repository.

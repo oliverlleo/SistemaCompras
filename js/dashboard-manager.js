@@ -14,12 +14,18 @@ class DashboardManager {
       listaMaterial: ''
     };
     this.listasMateriais = new Set(); // Para autocomplete
+    this.tooltipData = {}; // Cache para dados de tooltip das listas
   }
 
   // Inicializar dashboard
   async init() {
     try {
       console.log('Inicializando Dashboard Manager...');
+      
+      // Verificar se o container de tooltip existe, se não, criar
+      if (!document.getElementById('material-tooltip')) {
+        this.createTooltipContainer();
+      }
       
       this.setupEventListeners();
       await this.loadPedidos();
@@ -30,6 +36,76 @@ class DashboardManager {
       console.error('Erro ao inicializar Dashboard Manager:', error);
       this.showError('Erro ao carregar pedidos: ' + error.message);
     }
+  }
+  
+  // Criar container para tooltips (caso o UIManager não tenha criado)
+  createTooltipContainer() {
+    const tooltip = document.createElement('div');
+    tooltip.id = 'material-tooltip';
+    tooltip.className = 'absolute z-50 bg-gray-900 text-white text-xs rounded py-2 px-3 pointer-events-none opacity-0 transition-opacity duration-200';
+    tooltip.style.transform = 'translateX(-50%)';
+    document.body.appendChild(tooltip);
+    console.log('Container de tooltip criado');
+  }
+  
+  // Carregar dados para tooltip de uma lista de material
+  async carregarDadosTooltipListas(pedido) {
+    if (!pedido || !pedido.id || !pedido.listasMateriais) return;
+    
+    const pedidoId = pedido.id;
+    
+    // Verificar se já temos os dados em cache
+    if (this.tooltipData[pedidoId]) {
+      return;
+    }
+    
+    try {
+      // Buscar itens deste pedido apenas uma vez
+      const itens = await FirebaseService.buscarItensPedido(pedidoId);
+      
+      // Organizar itens por lista de material
+      const itensPorLista = itens.reduce((acc, item) => {
+        const lista = item.listaMaterial;
+        if (!acc[lista]) acc[lista] = [];
+        acc[lista].push(item);
+        return acc;
+      }, {});
+      
+      // Calcular dados para tooltip e armazenar em cache
+      this.tooltipData[pedidoId] = {};
+      
+      for (const lista in itensPorLista) {
+        const itensLista = itensPorLista[lista];
+        const totalItens = itensLista.length;
+        const totalQuantidade = itensLista.reduce((sum, item) => sum + (item.quantidade || 0), 0);
+        
+        this.tooltipData[pedidoId][lista] = {
+          totalItens,
+          totalQuantidade
+        };
+      }
+    } catch (error) {
+      console.error(`Erro ao carregar dados para tooltip do pedido ${pedidoId}:`, error);
+    }
+  }
+  
+  // Obter texto do tooltip para uma lista específica
+  getTooltipTextForLista(pedido, lista) {
+    if (!pedido || !pedido.id) return '';
+    
+    const pedidoId = pedido.id;
+    
+    // Verificar se temos dados para este pedido e lista
+    if (this.tooltipData[pedidoId] && this.tooltipData[pedidoId][lista]) {
+      const { totalItens, totalQuantidade } = this.tooltipData[pedidoId][lista];
+      return `${totalItens} itens\nQuantidade total: ${totalQuantidade}`;
+    }
+    
+    // Se não tivermos os dados, tentar carregar assincronamente
+    this.carregarDadosTooltipListas(pedido);
+    
+    // Texto padrão enquanto carrega
+    return 'Carregando informações...';
   }
 
   // Configurar eventos
@@ -148,6 +224,34 @@ class DashboardManager {
         
         // Adicionar ao conjunto global para autocomplete
         listas.forEach(lista => this.listasMateriais.add(lista));
+        
+        // Pré-processar dados para tooltips
+        // Organizar itens por lista de material
+        const itensPorLista = itens.reduce((acc, item) => {
+          const lista = item.listaMaterial;
+          if (!lista) return acc;
+          if (!acc[lista]) acc[lista] = [];
+          acc[lista].push(item);
+          return acc;
+        }, {});
+        
+        // Armazenar dados para tooltips
+        if (!this.tooltipData[pedido.id]) {
+          this.tooltipData[pedido.id] = {};
+        }
+        
+        for (const lista in itensPorLista) {
+          const itensLista = itensPorLista[lista];
+          const totalItens = itensLista.length;
+          const totalQuantidade = itensLista.reduce((sum, item) => sum + (Number(item.quantidade) || 0), 0);
+          
+          this.tooltipData[pedido.id][lista] = {
+            totalItens,
+            totalQuantidade
+          };
+          
+          console.log(`Tooltip para ${pedido.id} - ${lista}: ${totalItens} itens, quantidade: ${totalQuantidade}`);
+        }
         
         return pedido;
       });
@@ -315,6 +419,61 @@ class DashboardManager {
       const row = this.createTableRow(pedido);
       tableBody.appendChild(row);
     });
+    
+    // Configurar tooltips para as listas de materiais
+    this.setupTooltipsForMaterialTags();
+  }
+  
+  // Configurar tooltips para as tags de materiais
+  setupTooltipsForMaterialTags() {
+    // Obter todas as tags de materiais na tabela
+    const materialTags = document.querySelectorAll('#tableBody .material-tag.tooltip-trigger');
+    
+    console.log(`Configurando tooltips para ${materialTags.length} tags de materiais`);
+    
+    // Configurar evento de tooltip para cada tag
+    materialTags.forEach(tag => {
+      // Verificar se temos uma instância do UIManager para usar seu método de tooltip
+      if (window.PedidosApp && window.PedidosApp.uiManager) {
+        window.PedidosApp.uiManager.setupTooltipEvents(tag);
+      } else {
+        // Implementação própria se UIManager não estiver disponível
+        this.setupTooltipEventsBackup(tag);
+      }
+    });
+  }
+  
+  // Versão de backup da configuração de tooltips caso o UIManager não esteja disponível
+  setupTooltipEventsBackup(element) {
+    const tooltip = document.getElementById('material-tooltip');
+    if (!tooltip) return;
+    
+    element.addEventListener('mouseenter', (e) => {
+      const tooltipText = element.getAttribute('data-tooltip');
+      if (tooltipText) {
+        tooltip.innerHTML = tooltipText.replace(/\n/g, '<br>');
+        tooltip.style.opacity = '1';
+        this.positionTooltipBackup(tooltip, e.target);
+      }
+    });
+    
+    element.addEventListener('mouseleave', () => {
+      tooltip.style.opacity = '0';
+    });
+    
+    element.addEventListener('mousemove', (e) => {
+      this.positionTooltipBackup(tooltip, e.target);
+    });
+  }
+  
+  // Versão de backup do posicionamento de tooltips
+  positionTooltipBackup(tooltip, target) {
+    const rect = target.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+    
+    // Posicionar acima do elemento
+    tooltip.style.left = (rect.left + rect.width / 2) + 'px';
+    tooltip.style.top = (rect.top - tooltipRect.height - 8) + 'px';
   }
 
   // Criar linha da tabela
@@ -330,10 +489,19 @@ class DashboardManager {
       dataFormatada = data.toLocaleDateString('pt-BR');
     }
 
-    // Formatar listas de materiais como tags
-    const listasTags = pedido.listasMateriais ? 
-      pedido.listasMateriais.map(lista => `<span class="material-tag">${lista}</span>`).join('') :
-      '<span class="text-gray-400">-</span>';
+    // Formatar listas de materiais como tags com tooltips
+    let listasTags = '<span class="text-gray-400">-</span>';
+    
+    if (pedido.listasMateriais && pedido.listasMateriais.length > 0) {
+      // Buscar dados de itens para mostrar no tooltip
+      this.carregarDadosTooltipListas(pedido);
+      
+      listasTags = pedido.listasMateriais.map(lista => {
+        // Verificar se já temos os dados do tooltip para esta lista
+        const tooltipText = this.getTooltipTextForLista(pedido, lista);
+        return `<span class="material-tag tooltip-trigger" data-tooltip="${tooltipText}">${lista}</span>`;
+      }).join('');
+    }
 
     // Status com cor
     const statusClass = this.getStatusClass(pedido.statusGeral);
@@ -378,7 +546,9 @@ class DashboardManager {
       'Pendente de Análise': 'status-pending',
       'Em Produção': 'status-production',
       'Concluído': 'status-completed',
-      'Cancelado': 'status-cancelled'
+      'Cancelado': 'status-cancelled',
+      'Aguardando Compras': 'status-pending',
+      'Pronto para Separação': 'status-production'
     };
     return statusMap[status] || 'status-pending';
   }
@@ -954,6 +1124,17 @@ class DashboardManager {
       return acc;
     }, {});
 
+    // 🔧 MODIFICAÇÃO: Marcar itens existentes corretamente 
+    itens.forEach(item => {
+      item.isExistingData = true;
+      item.isNewItem = false;
+      item.isModified = false;
+      // Garantir que tem ID (itens do banco sempre têm)
+      if (!item.id) {
+        console.warn('Item existente sem ID:', item);
+      }
+    });
+    
     // Adicionar itens ao modalUIManager
     this.modalUIManager.allItems = [...itens];
     
@@ -1016,6 +1197,17 @@ class DashboardManager {
               });
             }
           }
+
+          // 🔧 ADICIONAR TOOLTIP para listas existentes
+          const items = itensPorLista[listaMaterial];
+          const totalQuantity = items.reduce((sum, item) => sum + (item.quantidade || 0), 0);
+          const tooltipText = `${itensCount} itens\nQuantidade total: ${totalQuantity}`;
+          
+          success.setAttribute('data-tooltip', tooltipText);
+          success.classList.add('tooltip-trigger');
+          
+          // Configurar eventos do tooltip
+          this.modalUIManager.setupTooltipEvents(success);
           
           // Adicionar classe visual para dados existentes
           zone.classList.add('has-existing-data');
@@ -1183,33 +1375,99 @@ class DashboardManager {
       }
 
       let pedidoId;
+      let novasListasAdicionadas = false;
+      let listasAnteriores = new Set();
       
       if (pedidoData && pedidoData.id) {
         // Modo edição - atualizar pedido existente
         pedidoId = pedidoData.id;
-        await FirebaseService.atualizarPedido(pedidoId, formData);
         
-        // Atualizar itens - primeiro excluir todos os itens existentes
-        if (pedidoData.itensExistentes) {
-          await Promise.all(pedidoData.itensExistentes.map(item => 
-            FirebaseService.excluirItem(item.id)
-          ));
+        // Verificar se existem novas listas sendo adicionadas
+        if (pedidoData.itensExistentes && this.modalUIManager && this.modalUIManager.allItems) {
+          // Obter listas existentes
+          pedidoData.itensExistentes.forEach(item => {
+            if (item.listaMaterial) {
+              listasAnteriores.add(item.listaMaterial);
+            }
+          });
+          
+          // Verificar se há novas listas nos itens atuais
+          this.modalUIManager.allItems.forEach(item => {
+            if (item.listaMaterial && !listasAnteriores.has(item.listaMaterial)) {
+              novasListasAdicionadas = true;
+              console.log(`🔍 Nova lista detectada: ${item.listaMaterial}`);
+            }
+          });
         }
         
-        this.showNotification('Pedido atualizado com sucesso!', 'success');
+        // Verificar se o pedido estava em um estado finalizado e agora tem novas listas
+        if (novasListasAdicionadas) {
+          console.log('🔄 Novas listas adicionadas a um pedido existente, atualizando status...');
+          formData.statusGeral = 'Pendente de Análise';
+        }
+        
+        await FirebaseService.atualizarPedido(pedidoId, formData);
+        
+        // 🔧 REGRA SIMPLES: EDITAR = NUNCA mexer em listas existentes, SEMPRE preservar tudo
+        // SÓ adicionar novas listas, NUNCA excluir nada automaticamente
+        
+        console.log('✅ EDITAR: Preservando TODAS as listas existentes intactas');
+        
+        // ZERO lógica de exclusão automática - deixar tudo como está
+        const itensParaPreservar = pedidoData.itensExistentes || [];
+        const itensParaExcluir = []; // NUNCA excluir automaticamente
+        
+        console.log(`✅ Preservando ${itensParaPreservar.length} itens existentes (todos inalterados)`);
+        console.log('📁 Nenhuma lista será excluída automaticamente - apenas novas listas serão adicionadas');
+        
+        // 🔧 NOTIFICAÇÃO SIMPLES: Informar que listas existentes foram preservadas
+        let mensagem = 'Pedido atualizado com sucesso!';
+        if (pedidoData && pedidoData.id && itensParaPreservar.length > 0) {
+          mensagem += `\n✅ ${itensParaPreservar.length} itens existentes preservados inalterados`;
+        }
+        
+        this.showNotification(mensagem, 'success');
       } else {
         // Modo criação - criar novo pedido
+        // Sempre definir o status como Pendente de Análise para pedidos novos
+        formData.statusGeral = 'Pendente de Análise';
         pedidoId = await FirebaseService.salvarPedido(formData);
         this.showNotification('Pedido cadastrado com sucesso!', 'success');
       }
       
       // Salvar itens (novos ou atualizados) se não for terceirizado
       if (!formData.ehTerceirizado && this.modalUIManager && this.modalUIManager.allItems && this.modalUIManager.allItems.length > 0) {
-        // Filtrar apenas itens que não são dados existentes ou que foram modificados
-        const itensParaSalvar = this.modalUIManager.allItems.filter(item => !item.isExistingData || item.isModified);
+        // 🔧 CORREÇÃO REAL: IGNORAR COMPLETAMENTE listas existentes - salvar APENAS listas genuinamente novas
+        const itensParaSalvar = this.modalUIManager.allItems.filter(item => {
+          // REGRA SIMPLES: Se é dado existente (vindo do banco), NÃO salvar
+          if (item.isExistingData === true) {
+            console.log(`🚫 IGNORANDO item existente (só visualização): ${item.codigo} - ${item.descricao}`);
+            return false;
+          }
+          
+          // SALVAR apenas se:
+          // 1. É genuinamente novo (sem ID)
+          // 2. Foi explicitamente marcado como novo pelo usuário
+          // 3. Não é dado existente
+          const ehNovoItem = !item.id && !item.isExistingData;
+          
+          if (ehNovoItem) {
+            console.log(`💾 Salvando item GENUINAMENTE NOVO: ${item.codigo} - ${item.descricao} (Lista: ${item.listaMaterial})`);
+          }
+          
+          return ehNovoItem;
+        });
         
         if (itensParaSalvar.length > 0) {
+          console.log(`💾 Salvando ${itensParaSalvar.length} novos itens...`);
           await FirebaseService.salvarItens(pedidoId, itensParaSalvar);
+          
+          // 🔧 NOTIFICAÇÃO ADICIONAL: Informar sobre novos itens salvos
+          if (pedidoData && pedidoData.id) {
+            this.showNotification(`💾 ${itensParaSalvar.length} novos itens adicionados ao pedido`, 'info');
+          }
+        } else {
+          console.log('ℹ️ Nenhum item novo para salvar');
         }
       }
       

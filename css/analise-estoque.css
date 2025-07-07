@@ -1,0 +1,765 @@
+/* Estilos para a página de análise de estoque */
+
+/* Container principal */
+.analise-estoque-container {
+    min-height: 100vh;
+    background-color: #f8fafc;
+    padding: 0;
+}
+
+/* Header da análise */
+.analise-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.analise-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+}
+
+.analise-subtitle {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1rem;
+}
+
+.nav-button {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.nav-button:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.nav-button svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+/* Seções */
+.selecao-section {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 2rem;
+    margin: 0 2rem 2rem 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.steps-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.step-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.step-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.step-number {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: white;
+    background-color: #cbd5e1;
+}
+
+.step-number.active {
+    background-color: #3182ce;
+}
+
+.step-number.completed {
+    background-color: #48bb78;
+}
+
+.step-number.disabled {
+    background-color: #e2e8f0;
+    color: #a0aec0;
+}
+
+.analise-select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.analise-select:focus {
+    outline: none;
+    border-color: #3182ce;
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+}
+
+.analise-select:disabled {
+    background-color: #f7fafc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Upload Section */
+.upload-section {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 2rem;
+    margin: 0 2rem 2rem 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.upload-section.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.upload-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.upload-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0 0 0.5rem 0;
+}
+
+.upload-subtitle {
+    color: #718096;
+    margin: 0;
+}
+
+.upload-zone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 0.75rem;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background-color: #f8fafc;
+}
+
+.upload-zone:hover,
+.upload-zone.dragover {
+    border-color: #3182ce;
+    background-color: #ebf8ff;
+}
+
+.upload-icon {
+    width: 3rem;
+    height: 3rem;
+    color: #718096;
+    margin: 0 auto 1rem auto;
+}
+
+.upload-text {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 0 0 0.5rem 0;
+}
+
+.upload-subtext {
+    color: #718096;
+    margin: 0 0 1.5rem 0;
+}
+
+.upload-btn {
+    background-color: #3182ce;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.upload-btn:hover {
+    background-color: #2c5282;
+}
+
+.file-input {
+    display: none;
+}
+
+/* Progress Section */
+.progress-section {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 2rem;
+    margin: 0 2rem 2rem 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.progress-section.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.progress-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0 0 1.5rem 0;
+}
+
+.progress-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+.progress-stat {
+    text-align: center;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    background-color: #f8fafc;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    letter-spacing: 0.05em;
+}
+
+.stat-pendente .stat-number {
+    color: #ed8936;
+}
+
+.stat-estoque .stat-number {
+    color: #48bb78;
+}
+
+.stat-compra .stat-number {
+    color: #3182ce;
+}
+
+/* Confronto Section */
+.confronto-section {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 2rem;
+    margin: 0 2rem 2rem 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.confronto-section.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.confronto-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0 0 1rem 0;
+}
+
+.confronto-info {
+    background-color: #ebf8ff;
+    border: 1px solid #bee3f8;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.confronto-info-text {
+    color: #2c5282;
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+/* Bulk Controls */
+.bulk-controls {
+    background-color: #f8fafc;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.bulk-controls.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.bulk-controls-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bulk-selection-info {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.bulk-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-select-all,
+.btn-bulk-allocate,
+.btn-bulk-purchase {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+}
+
+.btn-select-all {
+    background-color: #e2e8f0;
+    color: #4a5568;
+}
+
+.btn-select-all:hover {
+    background-color: #cbd5e1;
+}
+
+.btn-bulk-allocate {
+    background-color: #48bb78;
+    color: white;
+}
+
+.btn-bulk-allocate:hover:not(:disabled) {
+    background-color: #38a169;
+}
+
+.btn-bulk-purchase {
+    background-color: #3182ce;
+    color: white;
+}
+
+.btn-bulk-purchase:hover:not(:disabled) {
+    background-color: #2c5282;
+}
+
+.btn-bulk-allocate:disabled,
+.btn-bulk-purchase:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Table */
+.table-container {
+    overflow-x: auto;
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+}
+
+.confronto-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+}
+
+.confronto-table th {
+    background-color: #f8fafc;
+    color: #2d3748;
+    font-weight: 600;
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.875rem;
+}
+
+.confronto-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.confronto-table tr:hover {
+    background-color: #f8fafc;
+}
+
+.confronto-table tr.row-selected {
+    background-color: #ebf8ff;
+}
+
+.confronto-table tr.item-processed {
+    background-color: #f0fff4;
+    opacity: 0.8;
+}
+
+.confronto-table tr.item-partial {
+    background-color: #fffbf0;
+    border-left: 3px solid #ed8936;
+}
+
+.item-checkbox {
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status-pendente {
+    background-color: #fed7d7;
+    color: #c53030;
+}
+
+.status-em-estoque {
+    background-color: #c6f6d5;
+    color: #22543d;
+}
+
+.status-para-compra {
+    background-color: #bee3f8;
+    color: #2c5282;
+}
+
+.status-parcial {
+    background-color: #fef5e7;
+    color: #c05621;
+}
+
+.qtde-disponivel {
+    color: #22543d;
+    font-weight: 600;
+}
+
+.qtde-insuficiente {
+    color: #c53030;
+    font-weight: 600;
+}
+
+.qtde-aguardando {
+    color: #718096;
+    font-style: italic;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-alocar,
+.btn-comprar {
+    padding: 0.375rem 0.75rem;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-alocar {
+    background-color: #48bb78;
+    color: white;
+}
+
+.btn-alocar:hover:not(:disabled) {
+    background-color: #38a169;
+}
+
+.btn-alocar:disabled {
+    background-color: #e2e8f0;
+    color: #a0aec0;
+    cursor: not-allowed;
+}
+
+.btn-comprar {
+    background-color: #3182ce;
+    color: white;
+}
+
+.btn-comprar:hover:not(:disabled) {
+    background-color: #2c5282;
+}
+
+.action-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+}
+
+.action-completed-text {
+    color: #22543d;
+    font-size: 0.75rem;
+    font-weight: 500;
+    font-style: italic;
+}
+
+/* Modal */
+.quantity-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.quantity-modal.hidden {
+    display: none;
+}
+
+.quantity-modal-content {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 0;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.quantity-modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.quantity-modal-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0;
+}
+
+.quantity-modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #718096;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s;
+}
+
+.quantity-modal-close:hover {
+    background-color: #f7fafc;
+    color: #2d3748;
+}
+
+.quantity-modal-body {
+    padding: 1.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.quantity-modal-actions {
+    padding: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .steps-container {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .progress-stats {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .analise-header,
+    .selecao-section,
+    .upload-section,
+    .progress-section,
+    .confronto-section {
+        margin-left: 1rem;
+        margin-right: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .analise-header {
+        padding: 1.5rem;
+    }
+    
+    .bulk-controls-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .bulk-actions {
+        justify-content: center;
+    }
+    
+    .confronto-table th,
+    .confronto-table td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .btn-alocar,
+    .btn-comprar {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.625rem;
+    }
+}
+
+/* Modal de quantidade - melhorias visuais */
+.quantity-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 8px;
+}
+
+.quantity-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.quantity-item-info {
+    flex: 1;
+}
+
+.quantity-item-code {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.quantity-item-name {
+    color: #4a5568;
+    margin-bottom: 4px;
+}
+
+.quantity-item-details {
+    display: flex;
+    gap: 12px;
+    font-size: 0.875rem;
+    color: #718096;
+    margin-top: 4px;
+}
+
+.item-detail {
+    display: inline-block;
+}
+
+.quantity-input-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 120px;
+}
+
+.quantity-item-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.input-help-text {
+    font-size: 0.75rem;
+    color: #718096;
+    margin-top: 4px;
+}
+
+/* Botões do modal */
+.btn-modal-confirm {
+    background-color: #3182ce;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.btn-modal-confirm:hover {
+    background-color: #2c5282;
+}
+
+.btn-modal-cancel {
+    background-color: #e2e8f0;
+    color: #4a5568;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.btn-modal-cancel:hover {
+    background-color: #cbd5e0;
+}

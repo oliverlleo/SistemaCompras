@@ -6,7 +6,7 @@
     <title>Sistema de Gerenciamento de Pedidos</title>
     
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <script src="https://lib.youware.com/youware-lib-editor.1751867514.js" id="yourware-lib"></script><script src="https://cdn.tailwindcss.com/3.4.16"></script>
     
     <!-- CSS customizado -->
     <link rel="stylesheet" href="./css/styles.css">
@@ -17,7 +17,7 @@
     
     <!-- SheetJS para processamento de planilhas -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-<script src="https://lib.youware.com/youware-lib.1747145198.js" id="yourware-lib"></script></head>
+</head>
 <body>
     <!-- Header -->
     <header class="header">
@@ -32,12 +32,20 @@
             <section class="filters-section">
                 <div class="filters-header">
                     <h2 class="section-title">Pedidos Cadastrados</h2>
-                    <button id="btnNovoPedido" class="btn btn-primary">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                        Novo Pedido
-                    </button>
+                    <div class="flex gap-3">
+                        <button id="btnAnaliseEstoque" class="btn btn-secondary">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                            </svg>
+                            Análise de Estoque
+                        </button>
+                        <button id="btnNovoPedido" class="btn btn-primary">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Novo Pedido
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="filters-content">
@@ -294,6 +302,11 @@
         // Event listener para botão "Ver Código"
         document.getElementById('btnViewCode').addEventListener('click', () => {
             window.open('./code-viewer.html', '_blank');
+        });
+
+        // Event listener para botão "Análise de Estoque"
+        document.getElementById('btnAnaliseEstoque').addEventListener('click', () => {
+            window.location.href = './analise-estoque.html';
         });
     </script>
 </body>

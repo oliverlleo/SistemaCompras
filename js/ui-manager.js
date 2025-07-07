@@ -11,6 +11,17 @@ class UIManager {
     
     this.loadedFiles = new Map(); // Armazenar arquivos carregados
     this.allItems = []; // Todos os itens processados
+    this.initTooltips(); // Inicializar sistema de tooltips
+  }
+
+  // 🔧 NOVA FUNÇÃO: Inicializar sistema de tooltips
+  initTooltips() {
+    // Criar container do tooltip
+    const tooltip = document.createElement('div');
+    tooltip.id = 'material-tooltip';
+    tooltip.className = 'absolute z-50 bg-gray-900 text-white text-xs rounded py-2 px-3 pointer-events-none opacity-0 transition-opacity duration-200';
+    tooltip.style.transform = 'translateX(-50%)';
+    document.body.appendChild(tooltip);
   }
 
   // Inicializar eventos da interface
@@ -174,6 +185,55 @@ class UIManager {
     });
   }
 
+  // Função para consolidar itens duplicados
+  consolidateItems(items) {
+    const consolidated = new Map();
+    
+    items.forEach(item => {
+      // Criar chave única baseada em código e descrição normalizada
+      const key = this.createItemKey(item);
+      
+      if (consolidated.has(key)) {
+        // Item já existe, somar a quantidade
+        const existingItem = consolidated.get(key);
+        existingItem.quantidade += item.quantidade;
+        
+        // Manter informações adicionais do item mais recente se existirem
+        if (item.altura && !existingItem.altura) existingItem.altura = item.altura;
+        if (item.largura && !existingItem.largura) existingItem.largura = item.largura;
+        if (item.cor && !existingItem.cor) existingItem.cor = item.cor;
+        if (item.medida && !existingItem.medida) existingItem.medida = item.medida;
+        if (item.observacoes && !existingItem.observacoes) existingItem.observacoes = item.observacoes;
+        if (item.preco) existingItem.preco = item.preco; // Usar preço mais recente
+        if (item.fornecedor && !existingItem.fornecedor) existingItem.fornecedor = item.fornecedor;
+        
+        // Marcar como consolidado
+        existingItem.wasConsolidated = true;
+        existingItem.consolidatedCount = (existingItem.consolidatedCount || 1) + 1;
+      } else {
+        // Item novo, adicionar ao mapa
+        const newItem = { ...item };
+        newItem.consolidatedCount = 1;
+        consolidated.set(key, newItem);
+      }
+    });
+    
+    return Array.from(consolidated.values());
+  }
+
+  // Criar chave única para um item
+  createItemKey(item) {
+    // Normalizar código e descrição para comparação
+    const codigo = (item.codigo || '').toString().trim().toLowerCase();
+    const descricao = (item.descricao || '').toString().trim().toLowerCase();
+    
+    // Remover caracteres especiais e espaços extras para uma comparação mais robusta
+    const codigoNorm = codigo.replace(/[^a-z0-9]/g, '');
+    const descricaoNorm = descricao.replace(/[^a-z0-9]/g, '');
+    
+    return `${codigoNorm}|${descricaoNorm}`;
+  }
+
   // Processar upload de arquivo
   async handleFileUpload(file, category, zone) {
     const fileProcessor = new FileProcessor();
@@ -192,15 +252,46 @@ class UIManager {
       const result = await fileProcessor.processFile(file, category);
       
       if (result.success) {
+        // Verificar se há dados existentes para esta categoria
+        const existingItems = this.allItems.filter(item => item.listaMaterial === category);
+        const hasExistingData = existingItems.length > 0;
+        
+        // Marcar novos itens como modificados
+        result.items.forEach(item => {
+          item.isModified = true;
+          item.isNewItem = true;
+        });
+        
+        if (hasExistingData) {
+          // Consolidar automaticamente
+          const otherItems = this.allItems.filter(item => item.listaMaterial !== category);
+          const allCategoryItems = [...existingItems, ...result.items];
+          const consolidatedItems = this.consolidateItems(allCategoryItems);
+          
+          this.allItems = [...otherItems, ...consolidatedItems];
+          
+          // Atualizar resultado para mostrar consolidação
+          const originalCount = allCategoryItems.length;
+          const finalCount = consolidatedItems.length;
+          const consolidatedCount = originalCount - finalCount;
+          
+          result.totalItemsAfterMerge = finalCount;
+          result.consolidatedItems = consolidatedCount;
+          
+          if (consolidatedCount > 0) {
+            result.consolidationMessage = `${consolidatedCount} itens duplicados foram consolidados`;
+          }
+        } else {
+          // Primeira vez carregando esta categoria
+          this.allItems = this.allItems.filter(item => item.listaMaterial !== category);
+          this.allItems.push(...result.items);
+        }
+        
         // Armazenar dados
         this.loadedFiles.set(category, result);
         
-        // Adicionar itens à lista geral
-        this.allItems = this.allItems.filter(item => item.listaMaterial !== category);
-        this.allItems.push(...result.items);
-        
         // Mostrar sucesso
-        this.showUploadSuccess(zone, result);
+        this.showUploadSuccess(zone, result, hasExistingData ? 'consolidate' : 'replace');
         
         // Atualizar pré-visualização
         this.updatePreview();
@@ -251,11 +342,32 @@ class UIManager {
     
     let message = `${result.fileName} - ${result.processedRows} itens carregados`;
     
-    if (actionChoice === 'add' && result.totalItemsAfterMerge) {
+    if (actionChoice === 'consolidate' && result.totalItemsAfterMerge) {
+      message = `${result.fileName} - ${result.processedRows} itens processados`;
+      if (result.consolidatedItems && result.consolidatedItems > 0) {
+        message += ` (${result.consolidatedItems} duplicados consolidados)`;
+      }
+      message += ` - Total: ${result.totalItemsAfterMerge}`;
+    } else if (actionChoice === 'add' && result.totalItemsAfterMerge) {
       message = `${result.fileName} - ${result.processedRows} itens adicionados (Total: ${result.totalItemsAfterMerge})`;
     }
     
-    success.querySelector('.file-info').textContent = message;
+    const fileInfo = success.querySelector('.file-info');
+    fileInfo.textContent = message;
+    
+    // Adicionar informação de consolidação se existir
+    if (result.consolidationMessage) {
+      const consolidationInfo = document.createElement('p');
+      consolidationInfo.className = 'mt-1 text-xs text-green-600';
+      consolidationInfo.textContent = result.consolidationMessage;
+      
+      // Remover mensagem anterior se existir
+      const oldInfo = success.querySelector('.consolidation-info');
+      if (oldInfo) oldInfo.remove();
+      
+      consolidationInfo.className += ' consolidation-info';
+      fileInfo.parentNode.insertBefore(consolidationInfo, fileInfo.nextSibling);
+    }
   }
 
   // Mostrar erro no upload
@@ -493,7 +605,8 @@ class UIManager {
     notification.className = `fixed top-4 right-4 max-w-md p-4 rounded-md shadow-lg z-50 transition-all duration-300 ${
       type === 'success' ? 'bg-green-500 text-white' :
       type === 'error' ? 'bg-red-500 text-white' :
-      'bg-blue-500 text-white'
+      type === 'info' ? 'bg-blue-500 text-white' :
+      'bg-gray-500 text-white'
     }`;
     
     notification.innerHTML = `
@@ -571,7 +684,7 @@ class UIManager {
   // Criar zona de upload para modal
   createModalUploadZone(category) {
     const div = document.createElement('div');
-    div.className = 'upload-zone bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-all duration-300 hover:border-blue-400 hover:bg-blue-50';
+    div.className = 'upload-zone bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-all duration-300 hover:border-blue-400 hover:bg-blue-50 relative';
     div.id = `upload-modal-${category.replace(/\s+/g, '-').toLowerCase()}`;
     
     div.innerHTML = `
@@ -586,7 +699,7 @@ class UIManager {
         </button>
         <input type="file" class="hidden" accept=".csv,.xls,.xlsx" data-category="${category}">
       </div>
-      <div class="upload-success hidden">
+      <div class="upload-success hidden tooltip-trigger" data-tooltip="">
         <svg class="mx-auto h-12 w-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
         </svg>
@@ -793,42 +906,67 @@ class UIManager {
         const existingItems = this.allItems.filter(item => item.listaMaterial === category);
         const hasExistingData = existingItems.length > 0;
         
-        let actionChoice = 'replace'; // padrão
+        // 🔧 REGRA SIMPLES: Se não tem dados existentes, só adicionar. Se tem, perguntar ao usuário.
+        let actionChoice = hasExistingData ? 'consolidate' : 'add'; // padrão: consolidar se existe, adicionar se não existe
         
         if (hasExistingData && isModal) {
-          // Perguntar ao usuário o que fazer com os dados existentes
+          // Oferecer opções claras ao usuário quando há dados existentes
           const choice = confirm(
             `Já existem ${existingItems.length} itens na lista "${category}".\n\n` +
-            `Clique "OK" para ADICIONAR os novos itens à lista existente.\n` +
-            `Clique "Cancelar" para SUBSTITUIR completamente a lista.`
+            `Clique "OK" para ADICIONAR/CONSOLIDAR: manter itens existentes + adicionar novos.\n` +
+            `Clique "Cancelar" para SUBSTITUIR: remover todos os existentes e usar apenas os novos.`
           );
-          actionChoice = choice ? 'add' : 'replace';
+          actionChoice = choice ? 'consolidate' : 'replace';
         }
         
-        // Marcar novos itens como modificados (para o sistema de edição)
+        // 🔧 CORREÇÃO: Marcar itens carregados de arquivo como GENUINAMENTE NOVOS
         result.items.forEach(item => {
           item.isModified = true;
           item.isNewItem = true;
+          item.isExistingData = false; // CRUCIAL: Marcar como NÃO sendo dado existente
+          item.fromUserUpload = true; // Marcar que veio de upload do usuário
+          // Garantir que não tem ID (é novo)
+          delete item.id;
+          console.log(`📁 Item de arquivo marcado como NOVO: ${item.codigo} - ${item.descricao}`);
         });
         
-        if (actionChoice === 'add') {
-          // Adicionar aos itens existentes
-          this.allItems.push(...result.items);
+        if (actionChoice === 'consolidate') {
+          // 🔧 CONSOLIDAR: Manter existentes + adicionar novos (sem excluir nada do banco)
+          const otherItems = this.allItems.filter(item => item.listaMaterial !== category);
           
-          // Atualizar o resultado para refletir o total
-          const totalItems = this.allItems.filter(item => item.listaMaterial === category);
-          result.totalItemsAfterMerge = totalItems.length;
+          // Manter existentes como visualização (não salvar novamente)
+          existingItems.forEach(item => {
+            item.isExistingData = true; // CRUCIAL: manter como existente (não salvar)
+            item.isNewItem = false;
+            console.log(`👁️ Item existente PRESERVADO: ${item.codigo}`);
+          });
+          
+          // Consolidar itens duplicados
+          const consolidatedItems = this.consolidateItems([...existingItems, ...result.items]);
+          
+          // Atualizar lista completa
+          this.allItems = [...otherItems, ...consolidatedItems];
+          
+          console.log(`🔄 Lista ${category} CONSOLIDADA - existentes preservados, novos adicionados`);
+          
         } else {
-          // Substituir completamente
+          // 🔧 SUBSTITUIR: Só neste caso remove existentes e adiciona novos
           this.allItems = this.allItems.filter(item => item.listaMaterial !== category);
           this.allItems.push(...result.items);
+          
+          // Marcar que esta lista foi explicitamente substituída
+          result.items.forEach(item => {
+            item.isReplacingExisting = true; // Para indicar que substitui lista existente
+          });
+          
+          console.log(`🔄 Lista ${category} SUBSTITUÍDA explicitamente pelo usuário`);
         }
         
         // Armazenar dados
         this.loadedFiles.set(category, result);
         
-        // Mostrar sucesso
-        this.showUploadSuccess(zone, result, actionChoice);
+        // Mostrar sucesso com tooltip
+        this.showUploadSuccess(zone, result, actionChoice, category);
         
         // Atualizar pré-visualização
         if (isModal) {
@@ -868,6 +1006,122 @@ class UIManager {
     this.toggleTerceirizadoFields();
     this.toggleFechaduraModel();
     this.updatePreview();
+  }
+
+  // 🔧 NOVA FUNÇÃO: Consolidar itens duplicados
+  consolidateItems(items) {
+    const consolidatedMap = new Map();
+    
+    items.forEach(item => {
+      // Criar chave única baseada em código e descrição (normalizada)
+      const key = `${item.codigo || ''}_${(item.descricao || '').toLowerCase().trim()}`.replace(/\s+/g, '_');
+      
+      if (consolidatedMap.has(key)) {
+        // Item já existe, somar quantidades e preservar outros dados
+        const existingItem = consolidatedMap.get(key);
+        existingItem.quantidade = (existingItem.quantidade || 0) + (item.quantidade || 0);
+        
+        // 🔧 IMPORTANTE: Preservar flags de dados existentes vs novos
+        // Se qualquer item na consolidação é novo, o resultado deve ser marcado como modificado
+        if (item.fromUserUpload === true || !item.isExistingData) {
+          existingItem.isNewItem = true;
+          existingItem.isExistingData = false;
+          existingItem.fromUserUpload = true;
+          console.log(`🔄 Consolidação resultou em item NOVO (tem dados do usuário): ${item.codigo}`);
+        }
+        
+        // Preservar dados adicionais se não existirem no item consolidado
+        ['altura', 'largura', 'cor', 'medida', 'preco', 'fornecedor', 'observacoes'].forEach(field => {
+          if (!existingItem[field] && item[field]) {
+            existingItem[field] = item[field];
+          }
+        });
+        
+        // Marcar que houve consolidação
+        existingItem.isConsolidated = true;
+        existingItem.consolidatedCount = (existingItem.consolidatedCount || 1) + 1;
+        
+        console.log(`🔄 Consolidando item: ${item.codigo} - ${item.descricao} (quantidade: ${item.quantidade})`);
+      } else {
+        // Primeiro item com essa chave
+        const newItem = { ...item };
+        newItem.consolidatedCount = 1;
+        consolidatedMap.set(key, newItem);
+      }
+    });
+    
+    const consolidatedItems = Array.from(consolidatedMap.values());
+    
+    console.log(`📊 Consolidação concluída: ${items.length} itens originais → ${consolidatedItems.length} itens finais`);
+    
+    return consolidatedItems;
+  }
+
+  // 🔧 NOVA FUNÇÃO: Mostrar sucesso do upload com tooltip
+  showUploadSuccess(zone, result, actionChoice, category) {
+    const content = zone.querySelector('.upload-content');
+    const success = zone.querySelector('.upload-success');
+    const error = zone.querySelector('.upload-error');
+    
+    // Esconder outros estados
+    content.classList.add('hidden');
+    error.classList.add('hidden');
+    success.classList.remove('hidden');
+    
+    // Atualizar informações do arquivo
+    const fileInfo = success.querySelector('.file-info');
+    if (fileInfo) {
+      let infoText = `${result.fileName} - ${result.processedRows} itens`;
+      if (result.consolidatedItems > 0) {
+        infoText += ` (${result.consolidatedItems} consolidados)`;
+      }
+      fileInfo.textContent = infoText;
+    }
+    
+    // 🔧 CALCULAR E CONFIGURAR TOOLTIP
+    const items = this.allItems.filter(item => item.listaMaterial === category);
+    const totalItems = items.length;
+    const totalQuantity = items.reduce((sum, item) => sum + (item.quantidade || 0), 0);
+    
+    const tooltipText = `${totalItems} itens\nQuantidade total: ${totalQuantity}`;
+    success.setAttribute('data-tooltip', tooltipText);
+    
+    // Configurar eventos do tooltip
+    this.setupTooltipEvents(success);
+    
+    console.log(`✅ Upload de ${category} concluído: ${totalItems} itens, quantidade total: ${totalQuantity}`);
+  }
+
+  // 🔧 NOVA FUNÇÃO: Configurar eventos do tooltip
+  setupTooltipEvents(element) {
+    const tooltip = document.getElementById('material-tooltip');
+    
+    element.addEventListener('mouseenter', (e) => {
+      const tooltipText = element.getAttribute('data-tooltip');
+      if (tooltipText) {
+        tooltip.innerHTML = tooltipText.replace(/\n/g, '<br>');
+        tooltip.style.opacity = '1';
+        this.positionTooltip(tooltip, e.target);
+      }
+    });
+    
+    element.addEventListener('mouseleave', () => {
+      tooltip.style.opacity = '0';
+    });
+    
+    element.addEventListener('mousemove', (e) => {
+      this.positionTooltip(tooltip, e.target);
+    });
+  }
+
+  // 🔧 NOVA FUNÇÃO: Posicionar tooltip
+  positionTooltip(tooltip, target) {
+    const rect = target.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+    
+    // Posicionar acima do elemento
+    tooltip.style.left = (rect.left + rect.width / 2) + 'px';
+    tooltip.style.top = (rect.top - tooltipRect.height - 8) + 'px';
   }
 }
 

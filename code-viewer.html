@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de Código - Sistema de Gerenciamento</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://lib.youware.com/youware-lib-editor.1751867514.js" id="yourware-lib"></script><script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    
+    <!-- Highlight.js para realce de sintaxe -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/xml.min.js"></script>
+    
+    <!-- JSZip para compactação de arquivos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <style>
+        /* Estilos específicos para o visualizador de código */
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Animação para o banner de novidades */
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .animate-bounce-slow {
+            animation: bounce-slow 3s infinite;
+        }
+        
+        .code-viewer-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .code-viewer-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem 0;
+        }
+        
+        .code-viewer-subtitle {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+        
+        .file-nav {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin: 0 2rem 2rem 2rem;
+        }
+        
+        .file-nav-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .download-btn {
+            background-color: #3182ce;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .download-btn:hover {
+            background-color: #2c5282;
+            transform: translateY(-1px);
+        }
+        
+        .download-btn svg {
+            width: 1rem;
+            height: 1rem;
+        }
+        
+        .folder-structure {
+            margin-bottom: 1.5rem;
+        }
+        
+        .folder {
+            margin-bottom: 0.5rem;
+        }
+        
+        .folder-name {
+            font-weight: 600;
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .folder-name:hover {
+            background-color: #f7fafc;
+        }
+        
+        .folder-name.active {
+            background-color: #e2e8f0;
+        }
+        
+        .folder-icon {
+            width: 1.25rem;
+            height: 1.25rem;
+            color: #4a5568;
+        }
+        
+        .folder-files {
+            padding-left: 1.5rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+        
+        .folder-files.open {
+            display: block;
+        }
+        
+        .file-button {
+            background-color: #f1f5f9;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        
+        .file-button:hover {
+            background-color: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+        
+        .file-button.active {
+            background-color: #dbeafe;
+            border-color: #93c5fd;
+            color: #1e40af;
+        }
+        
+        .file-icon {
+            width: 1rem;
+            height: 1rem;
+            color: #64748b;
+        }
+        
+        .code-container {
+            background-color: white;
+            border-radius: 0.75rem;
+            margin: 0 2rem 2rem 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .code-header {
+            background-color: #1e293b;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .code-filename {
+            font-weight: 600;
+        }
+        
+        .code-language {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        
+        .code-content {
+            padding: 0;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        pre {
+            margin: 0;
+            padding: 1.5rem;
+            border-radius: 0;
+        }
+        
+        code {
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        
+        .nav-button {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .nav-button svg {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+        
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .code-viewer-header,
+            .file-nav,
+            .code-container {
+                margin-left: 1rem;
+                margin-right: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="code-viewer-container">
+        <!-- Header -->
+        <header class="code-viewer-header">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="code-viewer-title">Visualizador de Código</h1>
+                    <p class="code-viewer-subtitle">
+                        Explore o código fonte do Sistema de Gerenciamento de Pedidos
+                    </p>
+                </div>
+                <button id="btnVoltar" class="nav-button">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Voltar ao Dashboard
+                </button>
+            </div>
+        </header>
+
+        <!-- Navegação de Arquivos -->
+        <section class="file-nav">
+            <div class="file-nav-title">
+                <h2>Estrutura do Sistema</h2>
+                <button id="btnDownloadAll" class="download-btn">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Download Completo (.zip)
+                </button>
+            </div>
+            
+            <div class="folder-structure">
+                <!-- Arquivos raiz -->
+                <div class="folder">
+                    <div class="folder-name" data-folder="root">
+                        <svg class="folder-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                        </svg>
+                        Arquivos Raiz
+                    </div>
+                    <div class="folder-files" id="folder-root">
+                        <button class="file-button" data-file="index.html" data-type="html">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            index.html
+                        </button>
+                        <button class="file-button" data-file="analise-estoque.html" data-type="html">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            analise-estoque.html
+                        </button>
+                        <button class="file-button" data-file="code-viewer.html" data-type="html">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            code-viewer.html
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Pasta CSS -->
+                <div class="folder">
+                    <div class="folder-name" data-folder="css">
+                        <svg class="folder-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                        </svg>
+                        css/
+                    </div>
+                    <div class="folder-files" id="folder-css">
+                        <button class="file-button" data-file="css/styles.css" data-type="css">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+                            </svg>
+                            styles.css
+                        </button>
+                        <button class="file-button" data-file="css/analise-estoque.css" data-type="css">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+                            </svg>
+                            analise-estoque.css
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Pasta JavaScript -->
+                <div class="folder">
+                    <div class="folder-name" data-folder="js">
+                        <svg class="folder-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                        </svg>
+                        js/
+                    </div>
+                    <div class="folder-files" id="folder-js">
+                        <button class="file-button" data-file="js/analise-estoque.js" data-type="javascript">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                            </svg>
+                            analise-estoque.js
+                        </button>
+                        <button class="file-button" data-file="js/firebase-config.js" data-type="javascript">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                            </svg>
+                            firebase-config.js
+                        </button>
+                        <button class="file-button" data-file="js/file-processor.js" data-type="javascript">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                            </svg>
+                            file-processor.js
+                        </button>
+                        <button class="file-button" data-file="js/form-handler.js" data-type="javascript">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                            </svg>
+                            form-handler.js
+                        </button>
+                        <button class="file-button" data-file="js/ui-manager.js" data-type="javascript">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                            </svg>
+                            ui-manager.js
+                        </button>
+                        <button class="file-button" data-file="js/main.js" data-type="javascript">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                            </svg>
+                            main.js
+                        </button>
+                        <button class="file-button" data-file="js/dashboard-manager.js" data-type="javascript">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                            </svg>
+                            dashboard-manager.js
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Arquivos de Documentação/Recursos -->
+                <div class="folder">
+                    <div class="folder-name" data-folder="docs">
+                        <svg class="folder-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                        </svg>
+                        Documentação/Recursos
+                    </div>
+                    <div class="folder-files" id="folder-docs">
+                        <button class="file-button" data-file="YOUWARE.md" data-type="markdown">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            YOUWARE.md
+                        </button>
+                        <button class="file-button" data-file="README.md" data-type="markdown">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            README.md
+                        </button>
+                        <button class="file-button" data-file="ANALISE-ESTOQUE.md" data-type="markdown">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            ANALISE-ESTOQUE.md
+                        </button>
+                        <button class="file-button" data-file="teste-estoque.csv" data-type="csv">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            teste-estoque.csv
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Visualizador de Código -->
+        <section id="codeContainer" class="code-container hidden">
+            <div class="code-header">
+                <span id="codeFilename" class="code-filename">Nenhum arquivo selecionado</span>
+                <span id="codeLanguage" class="code-language">javascript</span>
+            </div>
+            <div class="code-content">
+                <pre><code id="codeContent">// Selecione um arquivo para visualizar o código.</code></pre>
+            </div>
+        </section>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 max-w-sm mx-4">
+            <div class="flex items-center space-x-3">
+                <div class="animate-spin h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                <span id="loadingText" class="text-gray-700">Carregando código...</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Banner de novidades -->
+    <div class="fixed bottom-6 right-6 bg-blue-600 text-white rounded-lg shadow-lg p-4 max-w-md animate-bounce-slow">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium">Nova Funcionalidade: Tooltips nas Listas de Materiais</h3>
+                <div class="mt-1 text-xs">
+                    Implementamos tooltips que mostram a contagem de itens e quantidade total ao passar o mouse sobre as listas de materiais na tabela principal.
+                </div>
+                <div class="mt-2 flex">
+                    <button id="btnVerAtualizacoes" class="text-xs bg-blue-700 hover:bg-blue-800 px-2 py-1 rounded">
+                        Ver Arquivos Atualizados
+                    </button>
+                </div>
+            </div>
+            <button id="closeBanner" class="ml-4 text-white hover:text-blue-100">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Elementos da UI
+        const fileButtons = document.querySelectorAll('.file-button');
+        const folderNames = document.querySelectorAll('.folder-name');
+        const codeContainer = document.getElementById('codeContainer');
+        const codeFilename = document.getElementById('codeFilename');
+        const codeLanguage = document.getElementById('codeLanguage');
+        const codeContent = document.getElementById('codeContent');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
+        const btnVoltar = document.getElementById('btnVoltar');
+        const btnDownloadAll = document.getElementById('btnDownloadAll');
+        
+        // Mapa de arquivos e seu conteúdo (será preenchido conforme o usuário explora)
+        const fileContents = {};
+        
+        // Lista completa de arquivos para download
+        const allFiles = [
+            { path: 'index.html', type: 'html' },
+            { path: 'analise-estoque.html', type: 'html' },
+            { path: 'code-viewer.html', type: 'html' },
+            { path: 'css/styles.css', type: 'css' },
+            { path: 'css/analise-estoque.css', type: 'css' },
+            { path: 'js/analise-estoque.js', type: 'javascript' },
+            { path: 'js/firebase-config.js', type: 'javascript' },
+            { path: 'js/file-processor.js', type: 'javascript' },
+            { path: 'js/form-handler.js', type: 'javascript' },
+            { path: 'js/ui-manager.js', type: 'javascript' },
+            { path: 'js/main.js', type: 'javascript' },
+            { path: 'js/dashboard-manager.js', type: 'javascript' },
+            { path: 'YOUWARE.md', type: 'markdown' },
+            { path: 'README.md', type: 'markdown' },
+            { path: 'ANALISE-ESTOQUE.md', type: 'markdown' },
+            { path: 'teste-estoque.csv', type: 'csv' },
+            // Adicionar outros arquivos do sistema aqui
+        ];
+        
+        // Event listener para pastas
+        folderNames.forEach(folder => {
+            folder.addEventListener('click', () => {
+                const folderId = folder.dataset.folder;
+                const folderFiles = document.getElementById(`folder-${folderId}`);
+                
+                // Toggle pasta atual
+                folderFiles.classList.toggle('open');
+                folder.classList.toggle('active');
+            });
+        });
+        
+        // Abrir a pasta JavaScript por padrão, já que foram feitas alterações recentes nessa pasta
+        document.querySelector('#folder-js').classList.add('open');
+        document.querySelector('[data-folder="js"]').classList.add('active');
+        
+        // Event listener para botões de arquivo
+        fileButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const fileName = button.dataset.file;
+                const fileType = button.dataset.type;
+                
+                // Remover classe active de todos os botões
+                fileButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // Adicionar classe active ao botão clicado
+                button.classList.add('active');
+                
+                // Carregar conteúdo do arquivo
+                loadFileContent(fileName, fileType);
+            });
+        });
+        
+        // Destacar os arquivos recentemente modificados (tooltips)
+        const recentlyModifiedFiles = [
+            'js/dashboard-manager.js',
+            'js/ui-manager.js',
+            'css/styles.css'
+        ];
+        
+        // Adicionar indicador visual para arquivos modificados recentemente
+        recentlyModifiedFiles.forEach(filePath => {
+            const fileButton = document.querySelector(`.file-button[data-file="${filePath}"]`);
+            if (fileButton) {
+                fileButton.classList.add('bg-yellow-100', 'border-yellow-300');
+                
+                // Adicionar ícone de "recém modificado"
+                const newBadge = document.createElement('span');
+                newBadge.className = 'ml-auto text-xs font-semibold text-yellow-700 bg-yellow-200 px-2 py-0.5 rounded-full';
+                newBadge.textContent = 'Atualizado';
+                fileButton.appendChild(newBadge);
+            }
+        });
+        
+        // Carregar conteúdo do arquivo
+        async function loadFileContent(fileName, fileType) {
+            try {
+                // Mostrar loading
+                loadingOverlay.classList.remove('hidden');
+                loadingText.textContent = `Carregando ${fileName}...`;
+                
+                // Verificar se já temos o conteúdo em cache
+                if (fileContents[fileName]) {
+                    displayFileContent(fileName, fileType, fileContents[fileName]);
+                    return;
+                }
+                
+                // Fazer requisição para o arquivo
+                const response = await fetch(fileName);
+                
+                if (!response.ok) {
+                    throw new Error(`Erro ao carregar arquivo: ${response.status}`);
+                }
+                
+                const content = await response.text();
+                
+                // Salvar no cache
+                fileContents[fileName] = content;
+                
+                // Exibir conteúdo
+                displayFileContent(fileName, fileType, content);
+                
+            } catch (error) {
+                console.error('Erro ao carregar arquivo:', error);
+                codeContent.textContent = `// Erro ao carregar arquivo: ${error.message}`;
+                codeFilename.textContent = fileName;
+                codeLanguage.textContent = fileType;
+                codeContainer.classList.remove('hidden');
+                
+            } finally {
+                // Esconder loading
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+        
+        // Exibir conteúdo do arquivo
+        function displayFileContent(fileName, fileType, content) {
+            // Atualizar header do código
+            codeFilename.textContent = fileName;
+            codeLanguage.textContent = fileType;
+            
+            // Atualizar conteúdo do código
+            codeContent.textContent = content;
+            
+            // Definir classe para highlight.js
+            let hlClass = fileType;
+            if (fileType === 'html') hlClass = 'xml';
+            if (fileType === 'markdown') hlClass = 'markdown';
+            if (fileType === 'csv') hlClass = 'plaintext';
+            
+            codeContent.className = hlClass;
+            
+            // Aplicar highlight
+            hljs.highlightElement(codeContent);
+            
+            // Mostrar container de código
+            codeContainer.classList.remove('hidden');
+        }
+        
+        // Event listener para botão voltar
+        btnVoltar.addEventListener('click', () => {
+            window.location.href = './index.html';
+        });
+        
+        // Event listener para botão de download completo
+        btnDownloadAll.addEventListener('click', async () => {
+            await downloadAllFiles();
+        });
+        
+        // Event listener para fechar o banner de novidades
+        document.getElementById('closeBanner').addEventListener('click', () => {
+            document.querySelector('.animate-bounce-slow').classList.add('hidden');
+        });
+        
+        // Event listener para o botão de ver atualizações
+        document.getElementById('btnVerAtualizacoes').addEventListener('click', () => {
+            // Fechar o banner
+            document.querySelector('.animate-bounce-slow').classList.add('hidden');
+            
+            // Abrir a pasta JS e selecionar dashboard-manager.js
+            document.querySelector('[data-folder="js"]').click();
+            document.querySelector('.file-button[data-file="js/dashboard-manager.js"]').click();
+        });
+        
+        // Função para baixar todos os arquivos em um ZIP
+        async function downloadAllFiles() {
+            try {
+                // Mostrar loading
+                loadingOverlay.classList.remove('hidden');
+                loadingText.textContent = 'Preparando download do sistema completo...';
+                
+                // Criar novo objeto ZIP
+                const zip = new JSZip();
+                
+                // Carregar todos os arquivos
+                for (const fileInfo of allFiles) {
+                    loadingText.textContent = `Adicionando ${fileInfo.path}...`;
+                    
+                    // Verificar se já temos o conteúdo em cache
+                    let content;
+                    if (fileContents[fileInfo.path]) {
+                        content = fileContents[fileInfo.path];
+                    } else {
+                        try {
+                            const response = await fetch(fileInfo.path);
+                            if (!response.ok) {
+                                console.warn(`Arquivo não encontrado: ${fileInfo.path}, pulando...`);
+                                continue;
+                            }
+                            content = await response.text();
+                            fileContents[fileInfo.path] = content;
+                        } catch (error) {
+                            console.warn(`Erro ao carregar ${fileInfo.path}, pulando...`, error);
+                            continue;
+                        }
+                    }
+                    
+                    // Adicionar ao ZIP com a estrutura de pastas correta
+                    zip.file(fileInfo.path, content);
+                }
+                
+                // Adicionar imagens se houver
+                try {
+                    const images = ['7r2k1jhipu.png', 'bzllbff4ds.png'];
+                    for (const img of images) {
+                        loadingText.textContent = `Adicionando imagem ${img}...`;
+                        const response = await fetch(img);
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            zip.file(img, blob);
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Erro ao carregar imagens:', error);
+                }
+                
+                // Gerar o arquivo ZIP
+                loadingText.textContent = 'Gerando arquivo ZIP...';
+                const zipContent = await zip.generateAsync({
+                    type: 'blob',
+                    compression: 'DEFLATE',
+                    compressionOptions: { level: 9 }
+                });
+                
+                // Fazer download do arquivo
+                saveAs(zipContent, 'sistema-gerenciamento-pedidos.zip');
+                
+                loadingText.textContent = 'Download concluído!';
+                setTimeout(() => {
+                    loadingOverlay.classList.add('hidden');
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Erro ao gerar ZIP:', error);
+                loadingText.textContent = `Erro ao gerar ZIP: ${error.message}`;
+                setTimeout(() => {
+                    loadingOverlay.classList.add('hidden');
+                }, 3000);
+            }
+        }
+        
+        // Inicializar highlight.js
+        document.addEventListener('DOMContentLoaded', () => {
+            hljs.configure({
+                languages: ['javascript', 'html', 'css', 'markdown'],
+                tabReplace: '    '
+            });
+            
+            // Carregar automaticamente o dashboard-manager.js, que é o principal arquivo modificado
+            const dashboardManagerButton = document.querySelector('.file-button[data-file="js/dashboard-manager.js"]');
+            if (dashboardManagerButton) {
+                dashboardManagerButton.click();
+            }
+        });
+    </script>
+</body>
+</html>

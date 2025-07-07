@@ -199,6 +199,26 @@ body {
   transform: scale(1.1);
 }
 
+/* 🔧 NOVO: Estilos para tooltip */
+#material-tooltip {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  max-width: 200px;
+  white-space: nowrap;
+  z-index: 9999;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tooltip-trigger {
+  cursor: help;
+}
+
+.tooltip-trigger:hover {
+  transform: translateY(-1px);
+  transition: transform 0.2s ease;
+}
+
 .upload-success {
   animation: fadeIn 0.5s ease-in-out;
 }

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gerenciamento de Pedidos</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    
+    <!-- CSS customizado -->
+    <link rel="stylesheet" href="./css/styles.css">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    
+    <!-- SheetJS para processamento de planilhas -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://lib.youware.com/youware-lib.1747145198.js" id="yourware-lib"></script></head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>Sistema de Gerenciamento de Pedidos</h1>
+        <p>Gerencie todos os seus pedidos e projetos de forma eficiente</p>
+    </header>
+
+    <!-- Container principal -->
+    <div class="main-container">
+        <main class="dashboard-container">
+            <!-- Barra de Ações e Filtros -->
+            <section class="filters-section">
+                <div class="filters-header">
+                    <h2 class="section-title">Pedidos Cadastrados</h2>
+                    <button id="btnNovoPedido" class="btn btn-primary">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Novo Pedido
+                    </button>
+                </div>
+                
+                <div class="filters-content">
+                    <div class="filter-group">
+                        <label class="filter-label">Buscar Cliente ou Nº Pedido</label>
+                        <input 
+                            type="text" 
+                            id="filterSearch" 
+                            class="filter-input"
+                            placeholder="Digite o nome do cliente ou número do pedido"
+                        >
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label">Tipo de Projeto</label>
+                        <select id="filterTipoProjeto" class="filter-input">
+                            <option value="">Todos</option>
+                            <option value="PVC">PVC</option>
+                            <option value="Alumínio">Alumínio</option>
+                            <option value="Brise">Brise</option>
+                            <option value="ACM">ACM</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label">Serviço Terceirizado</label>
+                        <select id="filterTerceirizado" class="filter-input">
+                            <option value="">Todos</option>
+                            <option value="true">Sim</option>
+                            <option value="false">Não</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label">Lista de Material</label>
+                        <input 
+                            type="text" 
+                            id="filterListaMaterial" 
+                            class="filter-input"
+                            placeholder="Ex: Perfil, Ferragens, Aço..."
+                        >
+                        <div id="materialsAutocomplete" class="autocomplete-dropdown hidden"></div>
+                    </div>
+                    
+                    <div class="filter-actions">
+                        <button id="btnLimparFiltros" class="btn btn-secondary">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            Limpar Filtros
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tabela de Pedidos -->
+            <section class="table-section">
+                <div class="table-header">
+                    <div class="table-info">
+                        <span id="totalPedidos" class="total-count">0 pedidos encontrados</span>
+                    </div>
+                    <div class="table-actions">
+                        <button id="btnRefresh" class="btn-icon" title="Atualizar lista">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <!-- Estado de loading -->
+                    <div id="tableLoading" class="table-loading">
+                        <div class="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+                        <p class="mt-2 text-gray-600">Carregando pedidos...</p>
+                    </div>
+                    
+                    <!-- Estado vazio -->
+                    <div id="tableEmpty" class="table-empty hidden">
+                        <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <h3 class="text-lg font-medium text-gray-600 mb-2">Nenhum pedido encontrado</h3>
+                        <p class="text-sm text-gray-500 mb-4">Clique em "Novo Pedido" para cadastrar o primeiro</p>
+                        <button id="btnNovoPedidoEmpty" class="btn btn-primary">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Criar Primeiro Pedido
+                        </button>
+                    </div>
+                    
+                    <!-- Tabela de dados -->
+                    <div id="tableData" class="hidden">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-field="clienteNome">
+                                        Cliente
+                                        <svg class="sort-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
+                                        </svg>
+                                    </th>
+                                    <th class="sortable" data-field="numeroPedido">
+                                        Nº Pedido
+                                        <svg class="sort-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
+                                        </svg>
+                                    </th>
+                                    <th class="sortable" data-field="tipoProjeto">
+                                        Tipo de Projeto
+                                        <svg class="sort-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
+                                        </svg>
+                                    </th>
+                                    <th>Listas de Materiais</th>
+                                    <th class="sortable" data-field="dataCriacao">
+                                        Data de Cadastro
+                                        <svg class="sort-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
+                                        </svg>
+                                    </th>
+                                    <th class="sortable" data-field="statusGeral">
+                                        Status
+                                        <svg class="sort-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
+                                        </svg>
+                                    </th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <!-- Dados serão inseridos dinamicamente aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Paginação -->
+                <div id="pagination" class="pagination hidden">
+                    <div class="pagination-info">
+                        <span id="paginationText">Mostrando 1-10 de 25 pedidos</span>
+                    </div>
+                    <div class="pagination-controls">
+                        <button id="btnPrevPage" class="pagination-btn" disabled>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                            Anterior
+                        </button>
+                        <div id="pageNumbers" class="page-numbers">
+                            <!-- Números das páginas serão inseridos aqui -->
+                        </div>
+                        <button id="btnNextPage" class="pagination-btn">
+                            Próximo
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal de Cadastro/Edição de Pedido -->
+    <div id="modalPedido" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle" class="modal-title">Novo Pedido</h2>
+                <button id="btnFecharModal" class="modal-close">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- O conteúdo do formulário será inserido aqui dinamicamente -->
+                <div id="modalFormContainer">
+                    <!-- Formulário será carregado dinamicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading overlay (hidden by default) -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 max-w-sm mx-4">
+            <div class="flex items-center space-x-3">
+                <div class="animate-spin h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                <span class="text-gray-700">Carregando sistema...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer discreto -->
+    <footer class="footer-discrete">
+        <div class="footer-content">
+            <button id="btnViewCode" class="view-code-btn" title="Ver código fonte do sistema">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                </svg>
+                Ver Código
+            </button>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="./js/firebase-config.js"></script>
+    <script src="./js/file-processor.js"></script>
+    <script src="./js/form-handler.js"></script>
+    <script src="./js/ui-manager.js"></script>
+    <script src="./js/dashboard-manager.js"></script>
+    <script src="./js/main.js"></script>
+
+    <!-- Script de inicialização -->
+    <script>
+        // Mostrar loading inicial
+        document.getElementById('loadingOverlay').classList.remove('hidden');
+        
+        // Aguardar carregamento completo
+        window.addEventListener('load', () => {
+            // Aguardar um momento para garantir que tudo foi carregado
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                
+                // Inicializar dashboard
+                if (window.PedidosApp) {
+                    window.PedidosApp.initDashboard();
+                }
+                
+            }, 500);
+        });
+        
+        // Debug helper
+        window.debugPedidos = () => {
+            if (window.PedidosApp) {
+                console.log('Estado da aplicação:', window.PedidosApp.debug());
+                return window.PedidosApp.debug();
+            }
+            console.log('Aplicação não inicializada');
+            return null;
+        };
+        
+        // Detectar se é mobile e ajustar interface
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+            document.body.classList.add('mobile-device');
+        }
+
+        // Event listener para botão "Ver Código"
+        document.getElementById('btnViewCode').addEventListener('click', () => {
+            window.open('./code-viewer.html', '_blank');
+        });
+    </script>
+</body>
+</html>

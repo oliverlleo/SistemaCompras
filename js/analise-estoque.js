@@ -790,6 +790,19 @@ class AnaliseEstoqueManager {
 
             console.log(`Alocando item: Necessário=${qtdeNecessaria}, Alocar=${novaQtdeAlocar}, Comprar=${qtdeComprarExistente}, Total=${qtdeTotalProcessada}, Status=${novoStatus}`);
 
+            // 🔧 BUSCAR DADOS DO PEDIDO PAI PARA HERDAR PROJETO (também na alocação)
+            let dadosPedidoPai = {};
+            if (this.pedidoSelecionado) {
+                try {
+                    const pedidoDoc = await db.collection('pedidos').doc(this.pedidoSelecionado).get();
+                    if (pedidoDoc.exists) {
+                        dadosPedidoPai = pedidoDoc.data();
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Erro ao buscar dados do pedido pai na alocação:', error);
+                }
+            }
+
             // Usar set com merge para funcionar mesmo se documento não existir
             const itemRef = db.collection('itens').doc(itemId);
             try {
@@ -807,7 +820,11 @@ class AnaliseEstoqueManager {
                     codigo: item.codigo,
                     quantidade: item.quantidade,
                     pedidoId: item.pedidoId,
-                    listaMaterial: item.listaMaterial || ''
+                    listaMaterial: item.listaMaterial || '',
+                    // 🔧 BUSCAR CAMPO tipoProjeto DO PEDIDO PAI E SALVAR AMBOS OS CAMPOS NO ITEM
+                    clienteNome: dadosPedidoPai.clienteNome || item.clienteNome,
+                    projetoNome: dadosPedidoPai.tipoProjeto || item.projetoNome,
+                    tipoProjeto: dadosPedidoPai.tipoProjeto || item.tipoProjeto
                 };
 
                 await itemRef.set(updateData, { merge: true });
@@ -1509,6 +1526,24 @@ class AnaliseEstoqueManager {
                 throw new Error(`Este item já foi totalmente processado! Status atual: ${statusAtual}`);
             }
 
+            // 🔧 BUSCAR DADOS DO PEDIDO PAI PARA HERDAR PROJETO
+            let dadosPedidoPai = {};
+            if (this.pedidoSelecionado) {
+                try {
+                    const pedidoDoc = await db.collection('pedidos').doc(this.pedidoSelecionado).get();
+                    if (pedidoDoc.exists) {
+                        dadosPedidoPai = pedidoDoc.data();
+                        console.log('📋 Dados do pedido pai carregados:', {
+                            clienteNome: dadosPedidoPai.clienteNome,
+                            projetoNome: dadosPedidoPai.projetoNome,
+                            tipoProjeto: dadosPedidoPai.tipoProjeto
+                        });
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Erro ao buscar dados do pedido pai:', error);
+                }
+            }
+
             // Dados do estoque e necessidade
             const qtdeNecessaria = item.quantidade || 0;
             const qtdeEstoque = this.mapaEstoque[item.codigo?.toUpperCase()] || 0;
@@ -1547,7 +1582,7 @@ class AnaliseEstoqueManager {
 
             console.log(`Processando item: Necessário=${qtdeNecessaria}, Comprar=${novaQtdeComprar}, Alocar=${qtdeAlocarExistente}, Total=${qtdeTotalProcessada}, Status=${novoStatus}`);
 
-            // Usar set com merge para compra - preservando todos os dados originais
+            // 🔧 GARANTIR HERANÇA DO PROJETO - Usar dados do pedido pai se disponível
             const setData = {
                 ...item, // Preserva todos os campos originais (descrição, especificações, etc.)
                 statusItem: novoStatus,
@@ -1559,7 +1594,13 @@ class AnaliseEstoqueManager {
                 codigo: item.codigo,
                 quantidade: item.quantidade,
                 pedidoId: item.pedidoId,
-                listaMaterial: item.listaMaterial || ''
+                listaMaterial: item.listaMaterial || '',
+                // 🔧 BUSCAR CAMPO tipoProjeto DO PEDIDO PAI E SALVAR AMBOS OS CAMPOS NO ITEM
+                clienteNome: dadosPedidoPai.clienteNome || item.clienteNome,
+                projetoNome: dadosPedidoPai.tipoProjeto || item.projetoNome,
+                tipoProjeto: dadosPedidoPai.tipoProjeto || item.tipoProjeto,
+                // Campo especial para marcar compra final
+                compraFinal: novaQtdeComprar
             };
 
             try {

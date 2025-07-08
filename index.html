@@ -6,7 +6,7 @@
     <title>Sistema de Gerenciamento de Pedidos</title>
     
     <!-- Tailwind CSS -->
-    <script src="https://lib.youware.com/youware-lib-editor.1751867514.js" id="yourware-lib"></script><script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script><script src="https://lib.youware.com/youware-lib-editor.1751867514.js" id="yourware-lib"></script><script src="https://cdn.tailwindcss.com/3.4.16"></script>
     
     <!-- CSS customizado -->
     <link rel="stylesheet" href="./css/styles.css">
@@ -33,24 +33,70 @@
                 <div class="filters-header">
                     <h2 class="section-title">Pedidos Cadastrados</h2>
                     <div class="flex gap-3">
-                        <button id="btnAnaliseEstoque" class="btn btn-secondary">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
-                            </svg>
-                            Análise de Estoque
-                        </button>
+                        <!-- Dropdown de Análise -->
+                        <div class="dropdown-container">
+                            <button id="btnAnalise" class="btn btn-secondary dropdown-toggle">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                                </svg>
+                                Análise
+                                <svg class="w-4 h-4 dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            <div id="dropdownAnalise" class="dropdown-menu">
+                                <a href="./analise-estoque.html" class="dropdown-item">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                                    </svg>
+                                    Análise de Estoque
+                                </a>
+                                <a href="./tratamento-empenho.html" class="dropdown-item">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                                    </svg>
+                                    Análise Final
+                                </a>
+                            </div>
+                        </div>
                         <button id="btnRecebimento" class="btn btn-success">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M9 1v6m6-6v6"></path>
                             </svg>
                             Recebimento
                         </button>
-                        <button id="btnCompraInicial" class="btn btn-info">
+                        <button id="btnEmpenho" class="btn btn-warning">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h10m-10 0a1 1 0 01-1-1v-1a1 1 0 011-1h10a1 1 0 011 1v1a1 1 0 01-1 1"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
                             </svg>
-                            Compra Inicial
+                            Empenho
                         </button>
+                        <!-- Dropdown de Compra -->
+                        <div class="relative">
+                            <button id="btnCompra" class="btn btn-info dropdown-trigger">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h10m-10 0a1 1 0 01-1-1v-1a1 1 0 011-1h10a1 1 0 011 1v1a1 1 0 01-1 1"></path>
+                                </svg>
+                                Compra
+                                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            <div id="dropdownCompra" class="dropdown-menu hidden">
+                                <button id="btnCompraInicial" class="dropdown-item">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M8 11v6a2 2 0 002 2h4a2 2 0 002-2v-6M8 11h8"></path>
+                                    </svg>
+                                    Compra Inicial
+                                </button>
+                                <button id="btnCompraFinal" class="dropdown-item">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Compra Final
+                                </button>
+                            </div>
+                        </div>
                         <button id="btnNovoPedido" class="btn btn-primary">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -316,14 +362,57 @@
             window.open('./code-viewer.html', '_blank');
         });
 
-        // Event listener para botão "Análise de Estoque"
-        document.getElementById('btnAnaliseEstoque').addEventListener('click', () => {
-            window.location.href = './analise-estoque.html';
+        // Event listener para dropdown "Análise"
+        const btnAnalise = document.getElementById('btnAnalise');
+        const dropdownAnalise = document.getElementById('dropdownAnalise');
+        const dropdownContainer = btnAnalise.closest('.dropdown-container');
+
+        btnAnalise.addEventListener('click', (e) => {
+            e.preventDefault();
+            dropdownContainer.classList.toggle('open');
+        });
+
+        // Fechar dropdown ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!dropdownContainer.contains(e.target)) {
+                dropdownContainer.classList.remove('open');
+            }
         });
 
         // Event listener para botão "Recebimento"
         document.getElementById('btnRecebimento').addEventListener('click', () => {
             window.location.href = './recebimento.html';
+        });
+
+        // Event listener para botão "Empenho"
+        document.getElementById('btnEmpenho').addEventListener('click', () => {
+            window.location.href = './empenho.html';
+        });
+
+        // Event listener para dropdown "Compra"
+        const btnCompra = document.getElementById('btnCompra');
+        const dropdownCompra = document.getElementById('dropdownCompra');
+
+        btnCompra.addEventListener('click', (e) => {
+            e.preventDefault();
+            dropdownCompra.classList.toggle('hidden');
+        });
+
+        // Fechar dropdown Compra ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!btnCompra.contains(e.target) && !dropdownCompra.contains(e.target)) {
+                dropdownCompra.classList.add('hidden');
+            }
+        });
+
+        // Event listener para "Compra Inicial"
+        document.getElementById('btnCompraInicial').addEventListener('click', () => {
+            window.location.href = './gestao-compras.html';
+        });
+
+        // Event listener para "Compra Final"
+        document.getElementById('btnCompraFinal').addEventListener('click', () => {
+            window.location.href = './compra-final.html';
         });
     </script>
 </body>

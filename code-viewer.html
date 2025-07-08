@@ -6,7 +6,7 @@
     <title>Visualizador de Código - Sistema de Gerenciamento</title>
     
     <!-- Tailwind CSS -->
-    <script src="https://lib.youware.com/youware-lib-editor.1751867514.js" id="yourware-lib"></script><script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script><script src="https://lib.youware.com/youware-lib-editor.1751867514.js" id="yourware-lib"></script><script src="https://cdn.tailwindcss.com/3.4.16"></script>
     
     <!-- Highlight.js para realce de sintaxe -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
@@ -291,18 +291,18 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-lg font-bold mb-1">✨ NOVAS FUNCIONALIDADES ADICIONADAS!</h3>
+                        <h3 class="text-lg font-bold mb-1">✨ ANÁLISE FINAL DE EMPENHO IMPLEMENTADA!</h3>
                         <p class="text-sm opacity-90">
-                            • 📦 <strong>Módulo de Recebimento</strong> - Controle completo de entregas com calendário interativo<br>
-                            • 🏢 <strong>Gestão de Fornecedores</strong> - Campos de fornecedor e prazo nos módulos de compras<br>
-                            • 📅 <strong>Calendário de Entregas</strong> - Visualização semanal e mensal com detalhes por fornecedor<br>
-                            • 📋 <strong>Modal de Detalhes</strong> - Clique nos fornecedores para ver itens específicos
+                            • 🔍 <strong>Módulo de Análise Final</strong> - Compare itens empenhados com lista final de produção<br>
+                            • 📊 <strong>Controle de Duplicatas</strong> - Previne reprocessamento de itens já analisados<br>
+                            • ⚡ <strong>Ações Automatizadas</strong> - Devolução ao estoque e geração de compras finais<br>
+                            • 🎯 <strong>Interface Intuitiva</strong> - Tabela de confronto com ações sugeridas automaticamente
                         </p>
                     </div>
                 </div>
                 <div class="text-xs opacity-75">
-                    Versão 3.1<br>
-                    07/07/2025
+                    Versão 3.2<br>
+                    08/07/2025
                 </div>
             </div>
         </div>
@@ -341,6 +341,13 @@
                             </svg>
                             analise-estoque.html
                         </button>
+                        <button class="file-button" data-file="compra-final.html" data-type="html">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            compra-final.html
+                            <span class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full ml-2">ATUALIZADO</span>
+                        </button>
                         <button class="file-button" data-file="gestao-compras.html" data-type="html">
                             <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -353,6 +360,20 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
                             recebimento.html
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2">NOVO</span>
+                        </button>
+                        <button class="file-button" data-file="empenho.html" data-type="html">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            empenho.html
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2">NOVO</span>
+                        </button>
+                        <button class="file-button" data-file="tratamento-empenho.html" data-type="html">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            tratamento-empenho.html
                             <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2">NOVO</span>
                         </button>
                         <button class="file-button" data-file="code-viewer.html" data-type="html">
@@ -441,6 +462,27 @@
                             recebimento.js
                             <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2">NOVO</span>
                         </button>
+                        <button class="file-button" data-file="js/analise-estoque.js" data-type="javascript">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                            </svg>
+                            analise-estoque.js
+                            <span class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full ml-2">ATUALIZADO</span>
+                        </button>
+                        <button class="file-button" data-file="js/empenho.js" data-type="javascript">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                            </svg>
+                            empenho.js
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2">NOVO</span>
+                        </button>
+                        <button class="file-button" data-file="js/tratamento-empenho.js" data-type="javascript">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                            </svg>
+                            tratamento-empenho.js
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2">NOVO</span>
+                        </button>
                         <button class="file-button" data-file="js/main.js" data-type="javascript">
                             <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
@@ -452,6 +494,13 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
                             </svg>
                             dashboard-manager.js
+                        </button>
+                        <button class="file-button" data-file="js/compra-final.js" data-type="javascript">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                            </svg>
+                            compra-final.js
+                            <span class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full ml-2">ATUALIZADO</span>
                         </button>
                     </div>
                 </div>
@@ -470,6 +519,18 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
                             YOUWARE.md
+                        </button>
+                        <button class="file-button" data-file="README-EMPENHO.md" data-type="markdown">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            README-EMPENHO.md
+                        </button>
+                        <button class="file-button" data-file="todo.json" data-type="json">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            todo.json
                         </button>
                         <button class="file-button" data-file="README.md" data-type="markdown">
                             <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -602,7 +663,10 @@
             { path: 'analise-estoque.html', type: 'html' },
             { path: 'gestao-compras.html', type: 'html' },
             { path: 'recebimento.html', type: 'html' },
+            { path: 'empenho.html', type: 'html' },
+            { path: 'tratamento-empenho.html', type: 'html' },
             { path: 'code-viewer.html', type: 'html' },
+            { path: 'compra-final.html', type: 'html' },
             
             // === ESTILOS CSS ===
             { path: 'css/styles.css', type: 'css' },
@@ -616,19 +680,19 @@
             { path: 'js/form-handler.js', type: 'javascript' },
             { path: 'js/gestao-compras.js', type: 'javascript' },
             { path: 'js/recebimento.js', type: 'javascript' },
+            { path: 'js/empenho.js', type: 'javascript' },
+            { path: 'js/tratamento-empenho.js', type: 'javascript' },
+            { path: 'js/compra-final.js', type: 'javascript' },
             { path: 'js/main.js', type: 'javascript' },
             { path: 'js/ui-manager.js', type: 'javascript' },
             
             // === DOCUMENTAÇÃO ===
             { path: 'YOUWARE.md', type: 'markdown' },
-            { path: 'README.md', type: 'markdown' },
-            { path: 'ANALISE-ESTOQUE.md', type: 'markdown' },
-            { path: 'MODULO3-GESTAO-COMPRAS.md', type: 'markdown' },
+            { path: 'README-EMPENHO.md', type: 'markdown' },
             
             // === RECURSOS E DADOS ===
-            { path: 'teste-estoque.csv', type: 'csv' },
-            { path: '7r2k1jhipu.png', type: 'image' },
-            { path: 'bzllbff4ds.png', type: 'image' },
+            { path: 'gxrkqdqgmn.png', type: 'image' },
+            { path: 'wtat9oje5z.png', type: 'image' },
             { path: 'todo.json', type: 'json' }
         ];
         
@@ -665,14 +729,12 @@
             });
         });
         
-        // Destacar os arquivos recentemente modificados (VERSÃO 3.1 - MÓDULO DE RECEBIMENTO)
+        // Destacar os arquivos recentemente modificados (VERSÃO 3.2 - MÓDULO DE ANÁLISE FINAL)
         const recentlyModifiedFiles = [
-            'recebimento.html',      // 🆕 NOVO MÓDULO DE RECEBIMENTO
-            'js/recebimento.js',     // 🆕 SCRIPT COMPLETO RECEBIMENTO
-            'js/gestao-compras.js',  // ✅ ADICIONADO CAMPO FORNECEDOR + PRAZO DE ENTREGA
-            'gestao-compras.html',   // ✅ MODAL ATUALIZADO COM NOVOS CAMPOS
-            'index.html',            // ✅ BOTÃO RECEBIMENTO + NAVEGAÇÃO
-            'code-viewer.html'       // ✅ LISTA DE ARQUIVOS ATUALIZADA
+            'js/analise-estoque.js',      // 🔧 CORREÇÃO DO PROBLEMA COM TIPO DE PROJETO
+            'js/compra-final.js',         // 🔧 CORREÇÃO DO PROBLEMA COM TIPO DE PROJETO
+            'compra-final.html',          // ✅ ATUALIZAÇÃO DA INTERFACE DE COMPRA FINAL
+            'code-viewer.html'            // ✅ LISTA DE ARQUIVOS ATUALIZADA
         ];
         
         // Adicionar indicador visual para arquivos modificados recentemente
@@ -776,9 +838,9 @@
             // Fechar o banner
             document.querySelector('.animate-bounce-slow').classList.add('hidden');
             
-            // Abrir a pasta JS e selecionar gestao-compras.js
+            // Abrir a pasta JS e selecionar compra-final.js
             document.querySelector('[data-folder="js"]').click();
-            document.querySelector('.file-button[data-file="js/gestao-compras.js"]').click();
+            document.querySelector('.file-button[data-file="js/compra-final.js"]').click();
         });
         
         // Função para baixar todos os arquivos em um ZIP
@@ -875,10 +937,10 @@
                 tabReplace: '    '
             });
             
-            // Carregar automaticamente o dashboard-manager.js, que é o principal arquivo modificado
-            const dashboardManagerButton = document.querySelector('.file-button[data-file="js/dashboard-manager.js"]');
-            if (dashboardManagerButton) {
-                dashboardManagerButton.click();
+            // Carregar automaticamente o compra-final.js, que é o arquivo recentemente modificado
+            const compraFinalButton = document.querySelector('.file-button[data-file="js/compra-final.js"]');
+            if (compraFinalButton) {
+                compraFinalButton.click();
             }
         });
     </script>

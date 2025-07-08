@@ -39,6 +39,18 @@
                             </svg>
                             Análise de Estoque
                         </button>
+                        <button id="btnRecebimento" class="btn btn-success">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M9 1v6m6-6v6"></path>
+                            </svg>
+                            Recebimento
+                        </button>
+                        <button id="btnCompraInicial" class="btn btn-info">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h10m-10 0a1 1 0 01-1-1v-1a1 1 0 011-1h10a1 1 0 011 1v1a1 1 0 01-1 1"></path>
+                            </svg>
+                            Compra Inicial
+                        </button>
                         <button id="btnNovoPedido" class="btn btn-primary">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -307,6 +319,11 @@
         // Event listener para botão "Análise de Estoque"
         document.getElementById('btnAnaliseEstoque').addEventListener('click', () => {
             window.location.href = './analise-estoque.html';
+        });
+
+        // Event listener para botão "Recebimento"
+        document.getElementById('btnRecebimento').addEventListener('click', () => {
+            window.location.href = './recebimento.html';
         });
     </script>
 </body>

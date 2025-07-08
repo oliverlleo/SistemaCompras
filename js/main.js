@@ -301,5 +301,24 @@ window.addEventListener('load', () => {
   app.init();
 });
 
+// Configurar listeners para botões do dashboard
+document.addEventListener('DOMContentLoaded', () => {
+  // Botão Análise de Estoque
+  const btnAnaliseEstoque = document.getElementById('btnAnaliseEstoque');
+  if (btnAnaliseEstoque) {
+    btnAnaliseEstoque.addEventListener('click', () => {
+      window.location.href = 'analise-estoque.html';
+    });
+  }
+
+  // Botão Compra Inicial
+  const btnCompraInicial = document.getElementById('btnCompraInicial');
+  if (btnCompraInicial) {
+    btnCompraInicial.addEventListener('click', () => {
+      window.location.href = 'gestao-compras.html';
+    });
+  }
+});
+
 // Disponibilizar globalmente para debug
 window.PedidosApp = app;

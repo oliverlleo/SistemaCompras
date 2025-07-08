@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo de Recebimento - Sistema de Gerenciamento</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://lib.youware.com/youware-lib-editor.1751867514.js" id="yourware-lib"></script><script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    
+    <!-- SheetJS para download de relatórios -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold">Recebimento de Materiais</h1>
+                    <p class="text-green-100 mt-1">Gerencie entregas e controle de recebimento no almoxarifado</p>
+                </div>
+                <button id="btnVoltar" class="bg-green-800 hover:bg-green-900 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Voltar ao Dashboard
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-6">
+        <!-- Seção 1: Calendário de Entregas (O Radar) -->
+        <section class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">📅 Calendário de Entregas</h2>
+                    <p class="text-gray-600">Visão estratégica das entregas programadas</p>
+                </div>
+                <button id="btnCalendarioCompleto" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    Ver Calendário Completo
+                </button>
+            </div>
+
+            <!-- Calendário Semanal -->
+            <div id="calendarioSemanal" class="grid grid-cols-1 md:grid-cols-7 gap-4">
+                <!-- Dias da semana serão gerados dinamicamente -->
+            </div>
+        </section>
+
+        <!-- Seção 2: Filtros para a Tabela -->
+        <section class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">🔍 Filtros de Busca</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
+                    <input type="text" id="filtroCliente" placeholder="Nome do cliente" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Código</label>
+                    <input type="text" id="filtroCodigo" placeholder="Código do item" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Fornecedor</label>
+                    <input type="text" id="filtroFornecedor" placeholder="Nome do fornecedor" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Projeto</label>
+                    <select id="filtroTipoProjeto" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <option value="">Todos</option>
+                        <option value="PVC">PVC</option>
+                        <option value="Alumínio">Alumínio</option>
+                        <option value="Brise">Brise</option>
+                        <option value="ACM">ACM</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Lista de Material</label>
+                    <input type="text" id="filtroListaMaterial" placeholder="Lista de material" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Prazo de Entrega (De)</label>
+                    <input type="date" id="filtroDataDe" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Prazo de Entrega (Até)</label>
+                    <input type="date" id="filtroDataAte" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                
+                <div class="flex items-end">
+                    <button id="btnLimparFiltros" class="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md transition-colors">
+                        Limpar Filtros
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Seção 3: Tabela de Itens Pendentes (A Mesa de Trabalho) -->
+        <section class="bg-white rounded-xl shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">📦 Itens Pendentes de Recebimento</h3>
+                    <p class="text-gray-600">Mesa de trabalho operacional</p>
+                </div>
+                <div class="flex gap-3">
+                    <button id="btnSelecionarTodos" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md transition-colors">
+                        Selecionar Todos
+                    </button>
+                    <button id="btnRegistrarRecebimento" disabled 
+                            class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
+                        Registrar Recebimento
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-8">
+                <div class="animate-spin h-8 w-8 border-2 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p class="text-gray-600">Carregando itens pendentes...</p>
+            </div>
+
+            <!-- Estado Vazio -->
+            <div id="estadoVazio" class="hidden text-center py-12">
+                <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2 2v-5m16 0h-2M4 13h2m0 0V9a2 2 0 012-2h2m-4 4v4m0-4h.01"></path>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Nenhum item pendente</h3>
+                <p class="text-gray-500">Não há itens aguardando recebimento no momento.</p>
+            </div>
+
+            <!-- Tabela -->
+            <div id="tabelaContainer" class="hidden overflow-x-auto">
+                <table class="w-full table-auto">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <input type="checkbox" id="checkboxMaster" class="rounded">
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qtd. Pendente</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fornecedor</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Projeto</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lista Material</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prazo Entrega</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpoTabela" class="bg-white divide-y divide-gray-200">
+                        <!-- Itens serão carregados dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal de Calendário Completo -->
+    <div id="modalCalendario" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-screen overflow-y-auto">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">Calendário Completo de Entregas</h3>
+                        <button id="btnFecharModalCalendario" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="px-6 py-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <button id="btnMesAnterior" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded">
+                            ◀ Anterior
+                        </button>
+                        <h4 id="tituloMes" class="text-xl font-bold"></h4>
+                        <button id="btnMesProximo" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded">
+                            Próximo ▶
+                        </button>
+                    </div>
+                    
+                    <div id="calendarioCompleto" class="grid grid-cols-7 gap-2">
+                        <!-- Calendário mensal será gerado dinamicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes do Fornecedor -->
+    <div id="modalDetalhesFornecedor" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-screen overflow-y-auto">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 id="tituloModalFornecedor" class="text-lg font-semibold text-gray-900">Entregas do Fornecedor</h3>
+                        <button id="btnFecharModalDetalhesFornecedor" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="px-6 py-4">
+                    <div class="mb-4">
+                        <p id="infoDataEntrega" class="text-sm text-gray-600"></p>
+                    </div>
+                    
+                    <!-- Tabela de itens do fornecedor -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full table-auto">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qtde Pendente</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lista Material</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaItensFornecedor" class="bg-white divide-y divide-gray-200">
+                                <!-- Itens serão inseridos dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="px-6 py-4 bg-gray-50 flex justify-end">
+                    <button id="btnFecharModalDetalhesFornecedor2" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Registro de Recebimento -->
+    <div id="modalRecebimento" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-screen overflow-y-auto">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">Registrar Recebimento</h3>
+                        <button id="btnFecharModalRecebimento" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="px-6 py-4">
+                    <!-- Campos obrigatórios -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Data do Recebimento</label>
+                            <input type="date" id="dataRecebimento" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Número da Nota Fiscal</label>
+                            <input type="text" id="numeroNotaFiscal" placeholder="Ex: NF-12345" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                        </div>
+                    </div>
+
+                    <!-- Tabela de itens selecionados -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full table-auto">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qtd. Pendente</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qtd. Recebida</th>
+                                </tr>
+                            </thead>
+                            <tbody id="corpoTabelaRecebimento" class="bg-white divide-y divide-gray-200">
+                                <!-- Itens selecionados serão carregados dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                    <div class="flex justify-between items-center">
+                        <div class="text-sm text-gray-600">
+                            <span id="totalItensSelecionados">0</span> itens selecionados
+                        </div>
+                        <div class="flex gap-3">
+                            <button id="btnCancelarRecebimento" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md transition-colors">
+                                Cancelar
+                            </button>
+                            <button id="btnSalvarRecebimento" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors">
+                                Salvar Recebimento
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script do módulo -->
+    <script src="./js/recebimento.js"></script>
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Compras - Sistema de Gerenciamento de Pedidos</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://lib.youware.com/youware-lib-editor.1751867514.js" id="yourware-lib"></script><script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    
+    <!-- CSS customizado -->
+    <link rel="stylesheet" href="./css/styles.css">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    
+    <!-- SheetJS para download de planilhas -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1>Gestão de Compras</h1>
+                <p>Gerencie ordens de compra baseadas na análise de estoque</p>
+            </div>
+            <button id="btnVoltarDashboard" class="btn btn-secondary">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Voltar ao Dashboard
+            </button>
+        </div>
+    </header>
+
+    <!-- Container principal -->
+    <div class="main-container">
+        <!-- Seção de Filtros Cascata -->
+        <section class="filters-section mb-6">
+            <div class="filters-header">
+                <h2 class="section-title">Filtros para Seleção</h2>
+                <p class="text-gray-600">Selecione os filtros para visualizar itens que precisam ser comprados</p>
+            </div>
+            
+            <div class="filters-content">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Filtro Cliente -->
+                    <div class="form-group">
+                        <label for="filtroCliente" class="block text-sm font-medium text-gray-700 mb-2">
+                            Cliente <span class="text-red-500">*</span>
+                        </label>
+                        <select id="filtroCliente" class="form-control" required>
+                            <option value="">Selecione um cliente...</option>
+                        </select>
+                        <div class="text-xs text-gray-500 mt-1">
+                            <span id="clienteInfo">Apenas clientes com itens para compra</span>
+                        </div>
+                    </div>
+
+                    <!-- Filtro Tipo de Projeto -->
+                    <div class="form-group">
+                        <label for="filtroTipoProjeto" class="block text-sm font-medium text-gray-700 mb-2">
+                            Tipo de Projeto <span class="text-red-500">*</span>
+                        </label>
+                        <select id="filtroTipoProjeto" class="form-control" disabled required>
+                            <option value="">Primeiro selecione um cliente</option>
+                        </select>
+                        <div class="text-xs text-gray-500 mt-1">
+                            <span id="tipoProjetoInfo">Tipos disponíveis para o cliente</span>
+                        </div>
+                    </div>
+
+                    <!-- Filtro Lista de Material -->
+                    <div class="form-group">
+                        <label for="filtroListaMaterial" class="block text-sm font-medium text-gray-700 mb-2">
+                            Lista de Material <span class="text-red-500">*</span>
+                        </label>
+                        <select id="filtroListaMaterial" class="form-control" disabled required>
+                            <option value="">Primeiro selecione tipo projeto</option>
+                        </select>
+                        <div class="text-xs text-gray-500 mt-1">
+                            <span id="listaMaterialInfo">Listas disponíveis para compra</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botão para aplicar filtros -->
+                <div class="flex justify-end mt-4">
+                    <button id="btnAplicarFiltros" class="btn btn-primary" disabled>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707v4.586a1 1 0 01-.293.707l-2 2A1 1 0 019 21.414V14.828a1 1 0 00-.293-.707L2.293 7.707A1 1 0 012 7V4z"></path>
+                        </svg>
+                        Carregar Itens
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Seção de Itens Filtrados -->
+        <section id="secaoItens" class="hidden">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Itens para Compra</h3>
+                        <p class="text-sm text-gray-600" id="infoItensCarregados">Itens que precisam ser comprados</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button id="btnSelecionarTodos" class="btn btn-secondary" disabled>
+                            Selecionar Todos
+                        </button>
+                        <button id="btnGerarCompra" class="btn btn-success" disabled>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h10m-10 0a1 1 0 01-1-1v-1a1 1 0 011-1h10a1 1 0 011 1v1a1 1 0 01-1 1"></path>
+                            </svg>
+                            Gerar Compra
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabela de Itens -->
+                <div class="overflow-x-auto">
+                    <table id="tabelaItens" class="w-full table-auto">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left">
+                                    <input type="checkbox" id="checkboxMaster" class="rounded">
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Código
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Descrição
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Qtd. para Compra
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoTabelaItens" class="bg-white divide-y divide-gray-200">
+                            <!-- Itens serão carregados dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Estado vazio -->
+                <div id="estadoVazioItens" class="hidden text-center py-12">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2 2v-5m16 0h-5a2 2 0 00-2 2v3a2 2 0 002 2h5v-5z" />
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhum item encontrado</h3>
+                    <p class="mt-1 text-sm text-gray-500">Não há itens que precisam ser comprados com os filtros selecionados.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal de Geração de Compra -->
+    <div id="modalCompra" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-screen overflow-y-auto">
+                <!-- Cabeçalho do Modal -->
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">Gerar Ordem de Compra</h3>
+                        <button id="btnFecharModal" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1">Revise as quantidades e gere a ordem de compra</p>
+                </div>
+
+                <!-- Corpo do Modal -->
+                <div class="px-6 py-4">
+                    <!-- Informações do contexto -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div>
+                                <span class="font-medium text-blue-900">Cliente:</span>
+                                <span id="modalCliente" class="text-blue-700 ml-1"></span>
+                            </div>
+                            <div>
+                                <span class="font-medium text-blue-900">Tipo de Projeto:</span>
+                                <span id="modalTipoProjeto" class="text-blue-700 ml-1"></span>
+                            </div>
+                            <div>
+                                <span class="font-medium text-blue-900">Lista de Material:</span>
+                                <span id="modalListaMaterial" class="text-blue-700 ml-1"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campos do formulário em grid de 2 colunas -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <!-- Campo de Fornecedor -->
+                        <div>
+                            <label for="inputFornecedor" class="block text-sm font-medium text-gray-700 mb-2">
+                                Fornecedor
+                            </label>
+                            <input 
+                                type="text" 
+                                id="inputFornecedor" 
+                                placeholder="Informe o nome do fornecedor para todos os itens"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">Este fornecedor será aplicado a todos os itens da compra</p>
+                        </div>
+                        
+                        <!-- Campo de Prazo de Entrega -->
+                        <div>
+                            <label for="inputPrazoEntrega" class="block text-sm font-medium text-gray-700 mb-2">
+                                Prazo de Entrega
+                            </label>
+                            <input 
+                                type="date" 
+                                id="inputPrazoEntrega" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">Data limite para entrega de todos os itens</p>
+                        </div>
+                    </div>
+
+                    <!-- Tabela de itens selecionados -->
+                    <div class="overflow-x-auto">
+                        <table id="tabelaModalCompra" class="w-full table-auto">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Código
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Descrição
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Qtd. Solicitada
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Qtd. a Comprar (Real)
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="corpoTabelaModalCompra" class="bg-white divide-y divide-gray-200">
+                                <!-- Itens selecionados serão carregados dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Rodapé do Modal -->
+                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                    <div class="flex justify-between items-center">
+                        <div class="text-sm text-gray-600">
+                            <span id="totalItensSelecionados">0</span> itens selecionados
+                        </div>
+                        <div class="flex gap-3">
+                            <button id="btnBaixarCSV" class="btn btn-info">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                Baixar Lista (CSV)
+                            </button>
+                            <button id="btnCancelarModal" class="btn btn-secondary">
+                                Cancelar
+                            </button>
+                            <button id="btnSalvarCompra" class="btn btn-success">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Salvar Compra
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="./js/gestao-compras.js"></script>
+</body>
+</html>

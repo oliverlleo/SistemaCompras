@@ -281,6 +281,32 @@
             </div>
         </header>
 
+        <!-- Banner de Novidades -->
+        <div class="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 m-4 rounded-xl shadow-lg">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="animate-bounce-slow">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold mb-1">✨ NOVAS FUNCIONALIDADES ADICIONADAS!</h3>
+                        <p class="text-sm opacity-90">
+                            • 📦 <strong>Módulo de Recebimento</strong> - Controle completo de entregas com calendário interativo<br>
+                            • 🏢 <strong>Gestão de Fornecedores</strong> - Campos de fornecedor e prazo nos módulos de compras<br>
+                            • 📅 <strong>Calendário de Entregas</strong> - Visualização semanal e mensal com detalhes por fornecedor<br>
+                            • 📋 <strong>Modal de Detalhes</strong> - Clique nos fornecedores para ver itens específicos
+                        </p>
+                    </div>
+                </div>
+                <div class="text-xs opacity-75">
+                    Versão 3.1<br>
+                    07/07/2025
+                </div>
+            </div>
+        </div>
+
         <!-- Navegação de Arquivos -->
         <section class="file-nav">
             <div class="file-nav-title">
@@ -314,6 +340,20 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
                             analise-estoque.html
+                        </button>
+                        <button class="file-button" data-file="gestao-compras.html" data-type="html">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            gestao-compras.html
+                            <span class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full ml-2">ATUALIZADO</span>
+                        </button>
+                        <button class="file-button" data-file="recebimento.html" data-type="html">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            recebimento.html
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2">NOVO</span>
                         </button>
                         <button class="file-button" data-file="code-viewer.html" data-type="html">
                             <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -387,6 +427,20 @@
                             </svg>
                             ui-manager.js
                         </button>
+                        <button class="file-button" data-file="js/gestao-compras.js" data-type="javascript">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                            </svg>
+                            gestao-compras.js
+                            <span class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full ml-2">ATUALIZADO</span>
+                        </button>
+                        <button class="file-button" data-file="js/recebimento.js" data-type="javascript">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                            </svg>
+                            recebimento.js
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2">NOVO</span>
+                        </button>
                         <button class="file-button" data-file="js/main.js" data-type="javascript">
                             <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
@@ -429,11 +483,47 @@
                             </svg>
                             ANALISE-ESTOQUE.md
                         </button>
+                        <button class="file-button" data-file="MODULO3-GESTAO-COMPRAS.md" data-type="markdown">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            MODULO3-GESTAO-COMPRAS.md
+                        </button>
                         <button class="file-button" data-file="teste-estoque.csv" data-type="csv">
                             <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
                             teste-estoque.csv
+                        </button>
+                        <button class="file-button" data-file="todo.json" data-type="json">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            todo.json
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Pasta de Imagens/Recursos -->
+                <div class="folder">
+                    <div class="folder-name" data-folder="assets">
+                        <svg class="folder-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                        </svg>
+                        Recursos/Imagens
+                    </div>
+                    <div class="folder-files" id="folder-assets">
+                        <button class="file-button" data-file="7r2k1jhipu.png" data-type="image">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            7r2k1jhipu.png
+                        </button>
+                        <button class="file-button" data-file="bzllbff4ds.png" data-type="image">
+                            <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            bzllbff4ds.png
                         </button>
                     </div>
                 </div>
@@ -463,25 +553,25 @@
     </div>
     
     <!-- Banner de novidades -->
-    <div class="fixed bottom-6 right-6 bg-blue-600 text-white rounded-lg shadow-lg p-4 max-w-md animate-bounce-slow">
+    <div class="fixed bottom-6 right-6 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-lg shadow-lg p-4 max-w-md animate-bounce-slow">
         <div class="flex items-start">
             <div class="flex-shrink-0">
                 <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
             </div>
             <div class="ml-3">
-                <h3 class="text-sm font-medium">Nova Funcionalidade: Tooltips nas Listas de Materiais</h3>
+                <h3 class="text-sm font-medium">🎉 VERSÃO 3.1 - MÓDULO DE RECEBIMENTO!</h3>
                 <div class="mt-1 text-xs">
-                    Implementamos tooltips que mostram a contagem de itens e quantidade total ao passar o mouse sobre as listas de materiais na tabela principal.
+                    📦 Novo módulo completo de recebimento com calendário de entregas, gestão de fornecedores, modal de detalhes e controle de itens pendentes.
                 </div>
                 <div class="mt-2 flex">
-                    <button id="btnVerAtualizacoes" class="text-xs bg-blue-700 hover:bg-blue-800 px-2 py-1 rounded">
-                        Ver Arquivos Atualizados
+                    <button id="btnVerAtualizacoes" class="text-xs bg-emerald-700 hover:bg-emerald-800 px-2 py-1 rounded">
+                        Ver Módulo Recebimento
                     </button>
                 </div>
             </div>
-            <button id="closeBanner" class="ml-4 text-white hover:text-blue-100">
+            <button id="closeBanner" class="ml-4 text-white hover:text-emerald-100">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
@@ -505,25 +595,41 @@
         // Mapa de arquivos e seu conteúdo (será preenchido conforme o usuário explora)
         const fileContents = {};
         
-        // Lista completa de arquivos para download
+        // Lista completa de arquivos para download (SISTEMA COMPLETO ATUALIZADO)
         const allFiles = [
+            // === PÁGINAS HTML ===
             { path: 'index.html', type: 'html' },
             { path: 'analise-estoque.html', type: 'html' },
+            { path: 'gestao-compras.html', type: 'html' },
+            { path: 'recebimento.html', type: 'html' },
             { path: 'code-viewer.html', type: 'html' },
+            
+            // === ESTILOS CSS ===
             { path: 'css/styles.css', type: 'css' },
             { path: 'css/analise-estoque.css', type: 'css' },
+            
+            // === SCRIPTS JAVASCRIPT ===
             { path: 'js/analise-estoque.js', type: 'javascript' },
-            { path: 'js/firebase-config.js', type: 'javascript' },
-            { path: 'js/file-processor.js', type: 'javascript' },
-            { path: 'js/form-handler.js', type: 'javascript' },
-            { path: 'js/ui-manager.js', type: 'javascript' },
-            { path: 'js/main.js', type: 'javascript' },
             { path: 'js/dashboard-manager.js', type: 'javascript' },
+            { path: 'js/file-processor.js', type: 'javascript' },
+            { path: 'js/firebase-config.js', type: 'javascript' },
+            { path: 'js/form-handler.js', type: 'javascript' },
+            { path: 'js/gestao-compras.js', type: 'javascript' },
+            { path: 'js/recebimento.js', type: 'javascript' },
+            { path: 'js/main.js', type: 'javascript' },
+            { path: 'js/ui-manager.js', type: 'javascript' },
+            
+            // === DOCUMENTAÇÃO ===
             { path: 'YOUWARE.md', type: 'markdown' },
             { path: 'README.md', type: 'markdown' },
             { path: 'ANALISE-ESTOQUE.md', type: 'markdown' },
+            { path: 'MODULO3-GESTAO-COMPRAS.md', type: 'markdown' },
+            
+            // === RECURSOS E DADOS ===
             { path: 'teste-estoque.csv', type: 'csv' },
-            // Adicionar outros arquivos do sistema aqui
+            { path: '7r2k1jhipu.png', type: 'image' },
+            { path: 'bzllbff4ds.png', type: 'image' },
+            { path: 'todo.json', type: 'json' }
         ];
         
         // Event listener para pastas
@@ -559,11 +665,14 @@
             });
         });
         
-        // Destacar os arquivos recentemente modificados (tooltips)
+        // Destacar os arquivos recentemente modificados (VERSÃO 3.1 - MÓDULO DE RECEBIMENTO)
         const recentlyModifiedFiles = [
-            'js/dashboard-manager.js',
-            'js/ui-manager.js',
-            'css/styles.css'
+            'recebimento.html',      // 🆕 NOVO MÓDULO DE RECEBIMENTO
+            'js/recebimento.js',     // 🆕 SCRIPT COMPLETO RECEBIMENTO
+            'js/gestao-compras.js',  // ✅ ADICIONADO CAMPO FORNECEDOR + PRAZO DE ENTREGA
+            'gestao-compras.html',   // ✅ MODAL ATUALIZADO COM NOVOS CAMPOS
+            'index.html',            // ✅ BOTÃO RECEBIMENTO + NAVEGAÇÃO
+            'code-viewer.html'       // ✅ LISTA DE ARQUIVOS ATUALIZADA
         ];
         
         // Adicionar indicador visual para arquivos modificados recentemente
@@ -635,6 +744,8 @@
             if (fileType === 'html') hlClass = 'xml';
             if (fileType === 'markdown') hlClass = 'markdown';
             if (fileType === 'csv') hlClass = 'plaintext';
+            if (fileType === 'json') hlClass = 'json';
+            if (fileType === 'image') hlClass = 'plaintext';
             
             codeContent.className = hlClass;
             
@@ -665,9 +776,9 @@
             // Fechar o banner
             document.querySelector('.animate-bounce-slow').classList.add('hidden');
             
-            // Abrir a pasta JS e selecionar dashboard-manager.js
+            // Abrir a pasta JS e selecionar gestao-compras.js
             document.querySelector('[data-folder="js"]').click();
-            document.querySelector('.file-button[data-file="js/dashboard-manager.js"]').click();
+            document.querySelector('.file-button[data-file="js/gestao-compras.js"]').click();
         });
         
         // Função para baixar todos os arquivos em um ZIP
@@ -707,19 +818,27 @@
                     zip.file(fileInfo.path, content);
                 }
                 
-                // Adicionar imagens se houver
+                // Adicionar arquivos binários (imagens) separadamente
                 try {
-                    const images = ['7r2k1jhipu.png', 'bzllbff4ds.png'];
-                    for (const img of images) {
-                        loadingText.textContent = `Adicionando imagem ${img}...`;
-                        const response = await fetch(img);
-                        if (response.ok) {
-                            const blob = await response.blob();
-                            zip.file(img, blob);
+                    const binaryFiles = [
+                        { path: '7r2k1jhipu.png', type: 'image' },
+                        { path: 'bzllbff4ds.png', type: 'image' }
+                    ];
+                    
+                    for (const file of binaryFiles) {
+                        loadingText.textContent = `Adicionando ${file.path}...`;
+                        try {
+                            const response = await fetch(file.path);
+                            if (response.ok) {
+                                const blob = await response.blob();
+                                zip.file(file.path, blob);
+                            }
+                        } catch (error) {
+                            console.warn(`Erro ao carregar ${file.path}:`, error);
                         }
                     }
                 } catch (error) {
-                    console.warn('Erro ao carregar imagens:', error);
+                    console.warn('Erro ao carregar arquivos binários:', error);
                 }
                 
                 // Gerar o arquivo ZIP
@@ -730,8 +849,10 @@
                     compressionOptions: { level: 9 }
                 });
                 
-                // Fazer download do arquivo
-                saveAs(zipContent, 'sistema-gerenciamento-pedidos.zip');
+                // Fazer download do arquivo com timestamp
+                const timestamp = new Date().toISOString().slice(0, 10);
+                const fileName = `sistema-gerenciamento-pedidos-v3-${timestamp}.zip`;
+                saveAs(zipContent, fileName);
                 
                 loadingText.textContent = 'Download concluído!';
                 setTimeout(() => {

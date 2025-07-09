@@ -54,6 +54,284 @@ class RecebimentoManager {
             
             console.log('Recebimento Manager inicializado com sucesso');
             
+            // Adicionar funções de teste para criar itens de demonstração
+            window.criarItemTesteInicial = async () => {
+                try {
+                    console.log('🧪 Criando item de teste para compra inicial...');
+                    
+                    const itemTeste = {
+                        codigo: 'TESTE-INICIAL-001',
+                        descricao: 'Item de teste para recebimento inicial',
+                        clienteNome: 'Cliente Teste',
+                        tipoProjeto: 'Projeto Teste',
+                        listaMaterial: 'Lista Teste',
+                        fornecedor: 'Fornecedor Teste',
+                        prazoEntrega: new Date().toISOString().split('T')[0],
+                        qtdeComprada: 5,
+                        qtdePendenteRecebimento: 5,
+                        statusItem: 'Aguardando Recebimento',
+                        dataUltimaAtualizacao: firebase.firestore.Timestamp.now(),
+                        ordemCompra: {
+                            numeroOC: `OC-${Date.now()}`,
+                            dataCompra: new Date().toISOString(),
+                            cliente: 'Cliente Teste',
+                            tipoProjeto: 'Projeto Teste',
+                            listaMaterial: 'Lista Teste',
+                            fornecedor: 'Fornecedor Teste',
+                            prazoEntrega: new Date().toISOString().split('T')[0]
+                        }
+                    };
+                    
+                    const docRef = await this.db.collection('itens').add(itemTeste);
+                    console.log('✅ Item de teste de compra inicial criado com ID:', docRef.id);
+                    
+                    // Recarregar dados
+                    await this.carregarItensPendentes();
+                    
+                    // Recarregamento completo para exibir o item
+                    if (window.recebimentoFinalManager) {
+                        await window.recebimentoFinalManager.carregarItensCombinados();
+                    }
+                    
+                    return `Item de teste criado com sucesso! ID: ${docRef.id}`;
+                } catch (error) {
+                    console.error('❌ Erro ao criar item de teste:', error);
+                    return `Erro ao criar item: ${error.message}`;
+                }
+            };
+            
+            // Adicionar função para criar múltiplos itens de demonstração
+            window.criarDadosDemonstracao = async () => {
+                try {
+                    console.log('🧪 Criando dados de demonstração de compra inicial...');
+                    
+                    // Criar 3 itens de compra inicial com a estrutura correta do módulo de gestão de compras
+                    const itensPendentes = [
+                        {
+                            codigo: 'INICIAL-001',
+                            descricao: 'Ferro de construção 12mm',
+                            produtoDescricao: 'Ferro de construção 12mm',
+                            clienteNome: 'Construtora Alfa',
+                            tipoProjeto: 'Comercial',
+                            listaMaterial: 'Estrutura',
+                            fornecedor: 'Ferro & Aço Ltda',
+                            prazoEntrega: new Date().toISOString().split('T')[0],
+                            qtdeComprada: 50, // Quantidade já comprada
+                            qtdePendenteRecebimento: 50, // Quantidade pendente de recebimento
+                            quantidadeComprar: 0, // Não precisa mais comprar
+                            statusItem: 'Comprado',
+                            pedidoId: 'DEMO-PEDIDO-001',
+                            ordemCompra: {
+                                numeroOC: `OC-${Date.now()}-001`,
+                                dataCompra: new Date().toISOString(),
+                                cliente: 'Construtora Alfa',
+                                tipoProjeto: 'Comercial',
+                                listaMaterial: 'Estrutura',
+                                fornecedor: 'Ferro & Aço Ltda',
+                                prazoEntrega: new Date().toISOString().split('T')[0]
+                            },
+                            ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
+                        },
+                        {
+                            codigo: 'INICIAL-002',
+                            descricao: 'Cimento Portland 50kg',
+                            produtoDescricao: 'Cimento Portland 50kg',
+                            clienteNome: 'Construtora Beta',
+                            tipoProjeto: 'Residencial',
+                            listaMaterial: 'Estrutura',
+                            fornecedor: 'Materiais Brasil',
+                            prazoEntrega: new Date().toISOString().split('T')[0],
+                            qtdeComprada: 100,
+                            qtdePendenteRecebimento: 100,
+                            quantidadeComprar: 0,
+                            statusItem: 'Comprado',
+                            pedidoId: 'DEMO-PEDIDO-002',
+                            ordemCompra: {
+                                numeroOC: `OC-${Date.now()}-002`,
+                                dataCompra: new Date().toISOString(),
+                                cliente: 'Construtora Beta',
+                                tipoProjeto: 'Residencial',
+                                listaMaterial: 'Estrutura',
+                                fornecedor: 'Materiais Brasil',
+                                prazoEntrega: new Date().toISOString().split('T')[0]
+                            },
+                            ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
+                        },
+                        {
+                            codigo: 'INICIAL-003',
+                            descricao: 'Areia Fina - Saco 20kg',
+                            produtoDescricao: 'Areia Fina - Saco 20kg',
+                            clienteNome: 'Construtora Gama',
+                            tipoProjeto: 'Comercial',
+                            listaMaterial: 'Acabamento',
+                            fornecedor: 'Areial Brasil',
+                            prazoEntrega: new Date().toISOString().split('T')[0],
+                            qtdeComprada: 75,
+                            qtdePendenteRecebimento: 75,
+                            quantidadeComprar: 0,
+                            statusItem: 'Comprado',
+                            pedidoId: 'DEMO-PEDIDO-003',
+                            ordemCompra: {
+                                numeroOC: `OC-${Date.now()}-003`,
+                                dataCompra: new Date().toISOString(),
+                                cliente: 'Construtora Gama',
+                                tipoProjeto: 'Comercial',
+                                listaMaterial: 'Acabamento',
+                                fornecedor: 'Areial Brasil',
+                                prazoEntrega: new Date().toISOString().split('T')[0]
+                            },
+                            ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
+                        }
+                    ];
+                    
+                    // Criar itens em batch
+                    const batch = this.db.batch();
+                    
+                    // Adicionar itens iniciais
+                    for (const item of itensPendentes) {
+                        const docRef = this.db.collection('itens').doc();
+                        batch.set(docRef, item);
+                    }
+                    
+                    await batch.commit();
+                    console.log('✅ Dados de demonstração de compra inicial criados com sucesso!');
+                    
+                    // Recarregar dados
+                    if (window.recebimentoFinalManager) {
+                        await window.recebimentoFinalManager.carregarItensCombinados();
+                    } else {
+                        await this.carregarItensPendentes();
+                    }
+                    
+                    return `Dados de demonstração criados com sucesso! 3 itens de compra inicial foram adicionados.`;
+                } catch (error) {
+                    console.error('❌ Erro ao criar dados de demonstração:', error);
+                    return `Erro ao criar dados: ${error.message}`;
+                }
+            };
+            
+            // Função para criar dados de teste de compra final
+            window.criarDadosCompraFinal = async () => {
+                console.log('🧪 Criando dados de teste para compra final...');
+                try {
+                    const itensCompraFinal = [
+                        {
+                            codigo: 'FINAL-001',
+                            descricao: 'Janela de Alumínio 120x100cm',
+                            produtoDescricao: 'Janela de Alumínio 120x100cm',
+                            cliente: 'Construtora Alpha',
+                            clienteNome: 'Construtora Alpha',
+                            tipoProjeto: 'Residencial',
+                            listaMaterial: 'Esquadria',
+                            fornecedor: 'AlumínioMax',
+                            prazoEntrega: new Date().toISOString().split('T')[0],
+                            analiseFinalRealizada: true,
+                            compraFinal: 5,
+                            criadoPorAnalise: true,
+                            dataAnalise: firebase.firestore.Timestamp.now(),
+                            historicoCompraFinal: [
+                                {
+                                    data: firebase.firestore.Timestamp.now(),
+                                    motivo: 'Item novo identificado em análise final',
+                                    qtde: 3,
+                                    status: 'Pendente'
+                                },
+                                {
+                                    dataCompra: firebase.firestore.Timestamp.now(),
+                                    fornecedor: 'AlumínioMax',
+                                    observacoes: 'Compra final realizada via sistema',
+                                    prazoEntrega: firebase.firestore.Timestamp.now(),
+                                    qtdeComprada: 2,
+                                    responsavel: 'Sistema',
+                                    status: 'Pendente'
+                                }
+                            ],
+                            statusItem: 'Aguardando Recebimento Final',
+                            ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
+                        },
+                        {
+                            codigo: 'FINAL-002',
+                            descricao: 'Porta de Madeira Maciça',
+                            produtoDescricao: 'Porta de Madeira Maciça',
+                            cliente: 'Construtora Beta',
+                            clienteNome: 'Construtora Beta',
+                            tipoProjeto: 'Comercial',
+                            listaMaterial: 'Acabamento',
+                            fornecedor: 'Madeiras Premium',
+                            prazoEntrega: new Date().toISOString().split('T')[0],
+                            analiseFinalRealizada: true,
+                            compraFinal: 8,
+                            criadoPorAnalise: true,
+                            dataAnalise: firebase.firestore.Timestamp.now(),
+                            historicoCompraFinal: [
+                                {
+                                    data: firebase.firestore.Timestamp.now(),
+                                    motivo: 'Item novo identificado em análise final',
+                                    qtde: 3,
+                                    status: 'Pendente'
+                                },
+                                {
+                                    dataCompra: firebase.firestore.Timestamp.now(),
+                                    fornecedor: 'Rehau',
+                                    observacoes: 'Compra final realizada via sistema',
+                                    prazoEntrega: firebase.firestore.Timestamp.now(),
+                                    qtdeComprada: 5,
+                                    responsavel: 'Sistema',
+                                    status: 'Pendente'
+                                }
+                            ],
+                            statusItem: 'Aguardando Recebimento Final',
+                            ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
+                        }
+                    ];
+                    
+                    // Criar itens em batch
+                    const batch = this.db.batch();
+                    
+                    // Adicionar itens de compra final
+                    for (const item of itensCompraFinal) {
+                        const docRef = this.db.collection('itens').doc();
+                        batch.set(docRef, item);
+                    }
+                    
+                    await batch.commit();
+                    console.log('✅ Dados de demonstração de compra final criados com sucesso!');
+                    
+                    // Recarregar dados
+                    await this.carregarItensPendentes();
+                    
+                    return `Dados de compra final criados com sucesso! 2 itens foram adicionados.`;
+                } catch (error) {
+                    console.error('❌ Erro ao criar dados de compra final:', error);
+                    return `Erro ao criar dados: ${error.message}`;
+                }
+            };
+
+            // Função para testar integração completa
+            window.testarIntegracaoCompleta = async () => {
+                console.log('🧪 Testando integração completa...');
+                try {
+                    // Limpar dados existentes
+                    console.log('🧹 Limpando dados existentes...');
+                    
+                    // Criar dados de demonstração para compra inicial
+                    await window.criarDadosDemonstracao();
+                    
+                    console.log('✅ Teste de integração completo finalizado!');
+                    console.log('📊 Verifique a tabela para ver itens de compra inicial');
+                    
+                    return 'Teste completo finalizado! Verifique a tabela de recebimento.';
+                } catch (error) {
+                    console.error('❌ Erro no teste de integração:', error);
+                    return `Erro no teste: ${error.message}`;
+                }
+            };
+
+            console.log('🧪 Funções de teste disponíveis:');
+            console.log('1. window.criarItemTesteInicial() - Cria um item individual');
+            console.log('2. window.criarDadosDemonstracao() - Cria 3 itens de demonstração de compra inicial');
+            console.log('3. window.testarIntegracaoCompleta() - Testa integração completa');
+            
         } catch (error) {
             console.error('Erro ao inicializar Recebimento Manager:', error);
             this.mostrarErro('Erro ao conectar com o banco de dados');
@@ -143,52 +421,14 @@ class RecebimentoManager {
     async carregarItensPendentes() {
         try {
             this.mostrarLoading();
-
-            // Query para buscar itens com qtdePendenteRecebimento > 0
-            // Se o campo não existir, assumimos que é qtdeComprada > 0 (por compatibilidade)
-            const snapshot = await this.db.collection('itens')
-                .where('qtdeComprada', '>', 0)
-                .limit(1000)
-                .get();
+            console.log('🔍 Carregando itens pendentes de recebimento (compra inicial + compra final)...');
 
             this.itensPendentes = [];
 
-            for (const doc of snapshot.docs) {
-                const item = doc.data();
-                
-                // Compatibilidade: Se não tiver qtdePendenteRecebimento, usar qtdeComprada
-                const qtdePendente = item.qtdePendenteRecebimento !== undefined 
-                    ? item.qtdePendenteRecebimento 
-                    : (item.qtdeComprada || 0);
+            // Carregar itens da compra inicial
+            await this.carregarItensCompraInicial();
 
-                if (qtdePendente > 0) {
-                    // Buscar dados do pedido para obter cliente
-                    let clienteNome = 'N/A';
-                    let tipoProjeto = 'N/A';
-                    
-                    if (item.pedidoId) {
-                        try {
-                            const pedidoDoc = await this.db.collection('pedidos').doc(item.pedidoId).get();
-                            if (pedidoDoc.exists) {
-                                const pedidoData = pedidoDoc.data();
-                                clienteNome = pedidoData.clienteNome || 'N/A';
-                                tipoProjeto = pedidoData.tipoProjeto || 'N/A';
-                            }
-                        } catch (error) {
-                            console.warn('Erro ao buscar dados do pedido:', error);
-                        }
-                    }
-
-                    this.itensPendentes.push({
-                        id: doc.id,
-                        ...item,
-                        qtdePendenteRecebimento: qtdePendente,
-                        clienteNome,
-                        tipoProjeto
-                    });
-                }
-            }
-
+            console.log(`✅ Total de itens carregados: ${this.itensPendentes.length}`);
             this.aplicarFiltros();
             this.esconderLoading();
 
@@ -198,6 +438,89 @@ class RecebimentoManager {
             this.esconderLoading();
         }
     }
+
+    async carregarItensCompraInicial() {
+        console.log('🔍 Carregando itens de compra inicial...');
+
+        // Buscar apenas itens com qtdeComprada > 0 que NÃO sejam de compra final
+        const snapshot = await this.db.collection('itens')
+            .where('qtdeComprada', '>', 0)
+            .limit(1000)
+            .get();
+            
+        console.log(`📊 Query de itens com qtdeComprada > 0: ${snapshot.size} itens`);
+
+        for (const doc of snapshot.docs) {
+            const item = doc.data();
+            
+            // Ignorar itens que têm historicoCompraFinal (são da compra final)
+            if (item.historicoCompraFinal) {
+                console.log(`⏭️ Item ${item.codigo || doc.id} - Ignorado (é de compra final)`);
+                continue;
+            }
+            
+            console.log(`🔍 Analisando item ${doc.id}:`, {
+                codigo: item.codigo,
+                qtdeComprada: item.qtdeComprada,
+                qtdePendenteRecebimento: item.qtdePendenteRecebimento,
+                statusItem: item.statusItem
+            });
+            
+            // Determinar quantidade pendente
+            let qtdePendente = 0;
+            
+            // Calcular quantidade já recebida baseada no histórico de recebimentos
+            const qtdeRecebida = item.historicoRecebimentos 
+                ? item.historicoRecebimentos.reduce((total, rec) => total + (rec.qtdeRecebida || rec.qtde || 0), 0)
+                : 0;
+            
+            // Quantidade pendente = quantidade comprada - quantidade já recebida
+            qtdePendente = item.qtdeComprada - qtdeRecebida;
+            console.log(`📦 Item ${item.codigo || doc.id} - Qtde pendente (calculada): ${qtdePendente} (comprada: ${item.qtdeComprada}, recebida: ${qtdeRecebida})`);
+            
+            // Se já foi totalmente recebido, ignorar item
+            if (qtdePendente <= 0) {
+                console.log(`✅ Item ${item.codigo || doc.id} - Totalmente recebido, não incluir na lista`);
+                continue;
+            }
+
+            if (qtdePendente > 0) {
+                // Buscar dados do pedido para obter cliente (se necessário)
+                let clienteNome = item.clienteNome || 'N/A';
+                let tipoProjeto = item.tipoProjeto || 'N/A';
+                
+                if (item.pedidoId && (clienteNome === 'N/A' || tipoProjeto === 'N/A')) {
+                    try {
+                        const pedidoDoc = await this.db.collection('pedidos').doc(item.pedidoId).get();
+                        if (pedidoDoc.exists) {
+                            const pedidoData = pedidoDoc.data();
+                            clienteNome = pedidoData.clienteNome || clienteNome;
+                            tipoProjeto = pedidoData.tipoProjeto || tipoProjeto;
+                        }
+                    } catch (error) {
+                        console.warn('Erro ao buscar dados do pedido:', error);
+                    }
+                }
+
+                this.itensPendentes.push({
+                    id: doc.id,
+                    ...item,
+                    qtdePendenteRecebimento: qtdePendente,
+                    clienteNome,
+                    tipoProjeto,
+                    tipoCompra: 'Compra Inicial' // Flag para identificar o tipo
+                });
+                
+                console.log(`✅ Item ${item.codigo || doc.id} adicionado à lista (compra inicial)`);
+            } else {
+                console.log(`⏭️ Item ${item.codigo || doc.id} - Sem quantidade pendente: ${qtdePendente}`);
+            }
+        }
+
+        console.log(`✅ Itens de compra inicial carregados: ${this.itensPendentes.length}`);
+    }
+
+    // Método removido - compra final agora é tratada pelo recebimentofinal.js
 
     // ============================================================================
     // CALENDÁRIO DE ENTREGAS
@@ -604,9 +927,17 @@ class RecebimentoManager {
                 tr.className = 'hover:bg-gray-50';
             }
 
+            // Definir cor do badge do tipo de compra - só compra inicial
+            const tipoCompraClass = 'bg-blue-100 text-blue-800';
+
             tr.innerHTML = `
                 <td class="px-4 py-3">
                     <input type="checkbox" class="item-checkbox rounded" data-index="${index}">
+                </td>
+                <td class="px-4 py-3 text-sm">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${tipoCompraClass}">
+                        ${item.tipoCompra}
+                    </span>
                 </td>
                 <td class="px-4 py-3 text-sm font-medium text-gray-900">
                     ${item.clienteNome}
@@ -839,19 +1170,21 @@ class RecebimentoManager {
                 if (qtdRecebida > item.qtdePendenteRecebimento) {
                     novoStatus = 'Recebido com Divergência';
                 } else if (novaQtdePendente === 0) {
-                    novoStatus = 'Recebido';
+                    novoStatus = 'Recebido Completo';
                 } else {
                     novoStatus = 'Recebimento Parcial';
                 }
 
-                // Criar entrada do histórico
+                // Criar entrada do histórico com flag de tipo de recebimento
                 const historicoRecebimento = {
                     data: agora.toISOString(),
                     notaFiscal: numeroNotaFiscal,
                     qtde: qtdRecebida,
                     status: novoStatus,
                     qtdePendenteAnterior: item.qtdePendenteRecebimento,
-                    qtdePendenteNova: Math.max(0, novaQtdePendente)
+                    qtdePendenteNova: Math.max(0, novaQtdePendente),
+                    tipoRecebimento: item.tipoCompra, // Flag para identificar se é recebimento de compra inicial ou final
+                    dataRecebimento: dataRecebimento
                 };
 
                 // Preparar atualização
@@ -906,7 +1239,6 @@ let recebimentoManager;
 
 document.addEventListener('DOMContentLoaded', () => {
     recebimentoManager = new RecebimentoManager();
+    // Expor globalmente para debug APÓS a criação
+    window.recebimentoManager = recebimentoManager;
 });
-
-// Expor globalmente para debug
-window.recebimentoManager = recebimentoManager;

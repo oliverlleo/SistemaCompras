@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Separação para Produção - Sistema de Gerenciamento</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script><script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    
+    <!-- CSS customizado -->
+    <link rel="stylesheet" href="./css/styles.css">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold">Separação para Produção</h1>
+                    <p class="text-purple-100 mt-1">Gerencie itens para separação e controle de produção</p>
+                </div>
+                <button id="btnVoltar" class="bg-purple-800 hover:bg-purple-900 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors" onclick="window.location.href='./index.html'">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Voltar ao Dashboard
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-6">
+        <!-- Breadcrumb -->
+        <nav class="mb-6">
+            <ol class="flex items-center space-x-2 text-sm text-gray-600">
+                <li><a href="./index.html" class="hover:text-purple-600">Início</a></li>
+                <li class="flex items-center"><svg class="w-4 h-4 mx-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></li>
+                <li class="text-purple-600 font-medium">Separação para Produção</li>
+            </ol>
+        </nav>
+
+        <!-- Seção de Filtros -->
+        <section class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z"></path>
+                        </svg>
+                        Filtros de Busca
+                    </h2>
+                    <p class="text-gray-600">Selecione os filtros para carregar os itens para separação</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="space-y-2">
+                    <label for="selectCliente" class="block text-sm font-medium text-gray-700">Cliente</label>
+                    <select id="selectCliente" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white">
+                        <option value="">Selecione um Cliente</option>
+                    </select>
+                </div>
+                
+                <div class="space-y-2">
+                    <label for="selectProjeto" class="block text-sm font-medium text-gray-700">Tipo de Projeto</label>
+                    <select id="selectProjeto" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white" disabled>
+                        <option value="">Selecione um Projeto</option>
+                    </select>
+                </div>
+                
+                <div class="space-y-2">
+                    <label for="selectLista" class="block text-sm font-medium text-gray-700">Lista de Material</label>
+                    <select id="selectLista" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white" disabled>
+                        <option value="">Selecione uma Lista</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="flex justify-end">
+                <button id="btnCarregarItens" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Carregar Itens
+                </button>
+            </div>
+        </section>
+        
+        <!-- Seção da Tabela de Itens -->
+        <section id="tabelaSection" class="bg-white rounded-xl shadow-lg hidden">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                            </svg>
+                            Itens para Separação
+                        </h2>
+                        <p class="text-gray-600">
+                            <span id="totalItensSeparacao" class="font-semibold text-purple-600">0</span> itens encontrados
+                        </p>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button id="btnSeparacaoEmMassa" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Separar Selecionados
+                        </button>
+                        <button id="btnDevolucaoEmMassa" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                            </svg>
+                            Devolver Selecionados
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left">
+                                <input type="checkbox" id="selectAll" class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qtd. Necessária</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empenhado</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprado</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Devolução Estoque</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaItensBody" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="8" class="px-6 py-12 text-center">
+                                <div class="flex flex-col items-center">
+                                    <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 7l2 2 4-4"></path>
+                                    </svg>
+                                    <h3 class="text-lg font-medium text-gray-900 mb-2">Selecione os filtros</h3>
+                                    <p class="text-gray-500">Selecione Cliente, Projeto e Lista para carregar os itens.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    
+    <!-- Modal de Separação -->
+    <div id="modalSeparacao" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" style="display: none;">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-xl bg-white">
+            <div class="flex justify-between items-center pb-4 border-b">
+                <h3 class="text-lg font-bold text-gray-900">Confirmar Separação para Produção</h3>
+                <button class="text-gray-400 hover:text-gray-600 close-btn">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="py-4">
+                <p class="text-gray-700 mb-4">Você está prestes a separar <span id="qtdItensSeparar" class="font-semibold text-purple-600">0</span> itens para produção.</p>
+                <p class="text-gray-600 mb-4">Esta ação vai registrar a quantidade necessária final como separada para produção e remover os itens da lista.</p>
+                <div id="listaItensSeparar" class="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                    <!-- Será populado via JavaScript -->
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button id="btnCancelarSeparacao" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">Cancelar</button>
+                <button id="btnConfirmarSeparacao" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">Confirmar Separação</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Devolução -->
+    <div id="modalDevolucao" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" style="display: none;">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-xl bg-white">
+            <div class="flex justify-between items-center pb-4 border-b">
+                <h3 class="text-lg font-bold text-gray-900">Confirmar Devolução ao Estoque</h3>
+                <button class="text-gray-400 hover:text-gray-600 close-btn">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="py-4">
+                <p class="text-gray-700 mb-4">Você está prestes a confirmar a devolução de <span id="qtdItensDevolucao" class="font-semibold text-orange-600">0</span> itens ao estoque.</p>
+                <p class="text-gray-600 mb-4">Esta ação vai registrar os itens como devolvidos e remover os itens da lista.</p>
+                <div id="listaItensDevolucao" class="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                    <!-- Será populado via JavaScript -->
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button id="btnCancelarDevolucao" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">Cancelar</button>
+                <button id="btnConfirmarDevolucao" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">Confirmar Devolução</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-8 flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+            <p id="loadingText" class="text-gray-700">Carregando...</p>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+    
+    <!-- Scripts -->
+    <script src="./js/firebase-config.js"></script>
+    <script src="./js/separacao-producao.js"></script>
+
+    <style>
+        /* Estilos para os itens do modal */
+        .modal-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .modal-item:last-child {
+            border-bottom: none;
+        }
+        
+        .modal-item-code {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .modal-item-desc {
+            flex: 1;
+            margin: 0 12px;
+            color: #6b7280;
+        }
+        
+        .modal-item-qty {
+            font-weight: 500;
+            color: #7c3aed;
+        }
+
+        /* Estilo para botões de ação na tabela */
+        .btn-action {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-action:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-action.btn-primary {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .btn-action.btn-primary:hover:not(:disabled) {
+            background-color: #059669;
+        }
+
+        .btn-action.btn-warning {
+            background-color: #f59e0b;
+            color: white;
+        }
+
+        .btn-action.btn-warning:hover:not(:disabled) {
+            background-color: #d97706;
+        }
+
+        .btn-action.btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .icon-sm {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* Toast styles */
+        .toast {
+            background: white;
+            border-radius: 8px;
+            padding: 12px 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-left: 4px solid;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            min-width: 300px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            border-left-color: #10b981;
+            color: #065f46;
+        }
+
+        .toast.error {
+            border-left-color: #ef4444;
+            color: #991b1b;
+        }
+
+        .toast.warning {
+            border-left-color: #f59e0b;
+            color: #92400e;
+        }
+    </style>
+</body>
+</html>

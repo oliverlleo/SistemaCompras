@@ -641,6 +641,8 @@ class GestaoCompras {
                     fornecedor: atualizacao.fornecedor, // Salvar fornecedor no item
                     prazoEntrega: atualizacao.prazoEntrega, // Salvar prazo de entrega no item
                     ordemCompra: atualizacao.ordemCompra,
+                    // 🔧 ADICIONAR CAMPO qtdePendenteRecebimento PARA O MÓDULO DE RECEBIMENTO
+                    qtdePendenteRecebimento: atualizacao.qtdComprada, // Mesmo valor da quantidade comprada
                     ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
                 });
             });

@@ -829,21 +829,40 @@ class SistemaTratamentoEmpenho {
         }
 
         try {
-            this.showLoading('Finalizando tratamento...');
+            this.showLoading('Finalizando tratamento e salvando quantidades necessárias finais...');
 
-            // Marcar todos os itens não processados como analisados (mesmo que não tenham tido ação)
+            // Marcar todos os itens e salvar Qtd. Necessária (Final)
             const batch = this.db.batch();
             
-            // Itens que foram processados já foram marcados individualmente
-            // Agora marcar os que não foram processados mas estavam na análise
-            itensPendentes.forEach(linha => {
+            // Processar TODOS os itens da tabela de confronto (processados e pendentes)
+            this.tabelaConfronto.forEach(linha => {
                 if (linha.itemEmpenhado) {
                     const itemRef = this.db.collection('itens').doc(linha.itemEmpenhado.id);
-                    batch.update(itemRef, {
+                    
+                    // Dados base para todos os itens
+                    const updateData = {
                         analiseFinalRealizada: true,
-                        dataAnalise: firebase.firestore.Timestamp.now(),
-                        motivoAnalise: 'Item analisado mas sem ação necessária'
-                    });
+                        dataAnalise: firebase.firestore.Timestamp.now()
+                    };
+                    
+                    // Salvar Qtd. Necessária (Final) se o item tem correspondente na lista final
+                    if (linha.itemFinal) {
+                        updateData.qtdNecessariaFinal = linha.qtdNecessaria;
+                        updateData.motivoAnalise = `Quantidade necessária final definida: ${linha.qtdNecessaria}`;
+                        console.log(`💾 Salvando Qtd. Necessária Final para ${linha.codigo}: ${linha.qtdNecessaria}`);
+                    } else {
+                        // Item empenhado mas não está na lista final
+                        updateData.qtdNecessariaFinal = 0;
+                        updateData.motivoAnalise = 'Item não necessário na lista final';
+                        console.log(`💾 Salvando Qtd. Necessária Final para ${linha.codigo}: 0 (não está na lista final)`);
+                    }
+                    
+                    // Se o item foi processado individualmente, não sobrescrever o status
+                    if (!linha.processada) {
+                        updateData.motivoAnalise = updateData.motivoAnalise || 'Item analisado mas sem ação necessária';
+                    }
+                    
+                    batch.update(itemRef, updateData);
                 }
             });
 
@@ -859,10 +878,12 @@ class SistemaTratamentoEmpenho {
             });
 
             await batch.commit();
+            
+            console.log(`✅ Quantidades necessárias finais salvas para ${this.tabelaConfronto.length} itens`);
 
             // Mostrar mensagem com botão para novo tratamento
             this.showToast(
-                `Tratamento confirmado! ${itensProcessados.length} itens processados e liberados para separação.`,
+                `Tratamento confirmado! ${itensProcessados.length} itens processados, ${this.tabelaConfronto.length} quantidades necessárias finais salvas e itens liberados para separação.`,
                 'success'
             );
             

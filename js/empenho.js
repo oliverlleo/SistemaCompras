@@ -86,10 +86,10 @@ class SistemaEmpenho {
 
             console.log(`${this.pedidosMap.size} pedidos carregados`);
 
-            // Passo 2: Buscar TODOS os Itens Relevantes
+            // Passo 2: Buscar TODOS os Itens Relevantes (excluindo itens já empenhados, separados e para compra)
             console.log('Carregando itens...');
             const itensSnapshot = await db.collection('itens')
-                .where('statusItem', 'not-in', ['Empenhado', 'Separado para Produção'])
+                .where('statusItem', 'not-in', ['Empenhado', 'Separado para Produção', 'Para Compra'])
                 .get();
 
             // Passo 3: Enriquecer os Itens com dados do pedido pai
@@ -809,9 +809,9 @@ class SistemaEmpenho {
         try {
             console.log('Atualizando dados locais...');
 
-            // Recarregar APENAS os itens do Firebase SEM mostrar loading
+            // Recarregar APENAS os itens do Firebase SEM mostrar loading (excluindo empenhados, separados e para compra)
             const itensSnapshot = await db.collection('itens')
-                .where('statusItem', 'not-in', ['Empenhado', 'Separado para Produção'])
+                .where('statusItem', 'not-in', ['Empenhado', 'Separado para Produção', 'Para Compra'])
                 .get();
 
             // Atualizar array local com dados atualizados

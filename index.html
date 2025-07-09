@@ -6,7 +6,7 @@
     <title>Sistema de Gerenciamento de Pedidos</title>
     
     <!-- Tailwind CSS -->
-    <script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script><script src="https://lib.youware.com/youware-lib-editor.1751867514.js" id="yourware-lib"></script><script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script><script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script><script src="https://lib.youware.com/youware-lib-editor.1751867514.js" id="yourware-lib"></script><script src="https://cdn.tailwindcss.com/3.4.16"></script>
     
     <!-- CSS customizado -->
     <link rel="stylesheet" href="./css/styles.css">
@@ -65,24 +65,44 @@
                             </svg>
                             Recebimento
                         </button>
-                        <button id="btnEmpenho" class="btn btn-warning">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                            </svg>
-                            Empenho
-                        </button>
+                        <!-- Dropdown de Separação -->
+                        <div class="dropdown-container">
+                            <button id="btnSeparacao" class="btn btn-warning dropdown-toggle">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                                </svg>
+                                Separação
+                                <svg class="w-4 h-4 dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            <div id="dropdownSeparacao" class="dropdown-menu">
+                                <a href="./empenho.html" class="dropdown-item">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                                    </svg>
+                                    Empenho
+                                </a>
+                                <a href="./separacao-producao.html" class="dropdown-item">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    Separação Prod
+                                </a>
+                            </div>
+                        </div>
                         <!-- Dropdown de Compra -->
-                        <div class="relative">
-                            <button id="btnCompra" class="btn btn-info dropdown-trigger">
+                        <div class="dropdown-container">
+                            <button id="btnCompra" class="btn btn-info dropdown-toggle">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h10m-10 0a1 1 0 01-1-1v-1a1 1 0 011-1h10a1 1 0 011 1v1a1 1 0 01-1 1"></path>
                                 </svg>
                                 Compra
-                                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                 </svg>
                             </button>
-                            <div id="dropdownCompra" class="dropdown-menu hidden">
+                            <div id="dropdownCompra" class="dropdown-menu">
                                 <button id="btnCompraInicial" class="dropdown-item">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M8 11v6a2 2 0 002 2h4a2 2 0 002-2v-6M8 11h8"></path>
@@ -362,21 +382,37 @@
             window.open('./code-viewer.html', '_blank');
         });
 
-        // Event listener para dropdown "Análise"
-        const btnAnalise = document.getElementById('btnAnalise');
-        const dropdownAnalise = document.getElementById('dropdownAnalise');
-        const dropdownContainer = btnAnalise.closest('.dropdown-container');
-
-        btnAnalise.addEventListener('click', (e) => {
-            e.preventDefault();
-            dropdownContainer.classList.toggle('open');
+        // Event listeners para dropdowns "Análise", "Separação" e "Compra"
+        const dropdowns = ['Analise', 'Separacao', 'Compra'];
+        
+        dropdowns.forEach(type => {
+            const btnDropdown = document.getElementById(`btn${type}`);
+            const dropdownContainer = btnDropdown.closest('.dropdown-container');
+            
+            btnDropdown.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // Fechar outros dropdowns
+                dropdowns.forEach(otherType => {
+                    if (otherType !== type) {
+                        const otherContainer = document.getElementById(`btn${otherType}`)?.closest('.dropdown-container');
+                        if (otherContainer) otherContainer.classList.remove('open');
+                    }
+                });
+                
+                // Alternar este dropdown
+                dropdownContainer.classList.toggle('open');
+            });
         });
-
-        // Fechar dropdown ao clicar fora
+        
+        // Fechar dropdowns ao clicar fora
         document.addEventListener('click', (e) => {
-            if (!dropdownContainer.contains(e.target)) {
-                dropdownContainer.classList.remove('open');
-            }
+            const containers = document.querySelectorAll('.dropdown-container');
+            containers.forEach(container => {
+                if (!container.contains(e.target)) {
+                    container.classList.remove('open');
+                }
+            });
         });
 
         // Event listener para botão "Recebimento"
@@ -384,33 +420,11 @@
             window.location.href = './recebimento.html';
         });
 
-        // Event listener para botão "Empenho"
-        document.getElementById('btnEmpenho').addEventListener('click', () => {
-            window.location.href = './empenho.html';
-        });
-
-        // Event listener para dropdown "Compra"
-        const btnCompra = document.getElementById('btnCompra');
-        const dropdownCompra = document.getElementById('dropdownCompra');
-
-        btnCompra.addEventListener('click', (e) => {
-            e.preventDefault();
-            dropdownCompra.classList.toggle('hidden');
-        });
-
-        // Fechar dropdown Compra ao clicar fora
-        document.addEventListener('click', (e) => {
-            if (!btnCompra.contains(e.target) && !dropdownCompra.contains(e.target)) {
-                dropdownCompra.classList.add('hidden');
-            }
-        });
-
-        // Event listener para "Compra Inicial"
+        // Event listeners para "Compra Inicial" e "Compra Final"
         document.getElementById('btnCompraInicial').addEventListener('click', () => {
             window.location.href = './gestao-compras.html';
         });
 
-        // Event listener para "Compra Final"
         document.getElementById('btnCompraFinal').addEventListener('click', () => {
             window.location.href = './compra-final.html';
         });

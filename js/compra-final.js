@@ -555,6 +555,8 @@ class SistemaCompraFinal {
                 batch.update(itemRef, {
                     historicoCompraFinal: firebase.firestore.FieldValue.arrayUnion(registroCompra),
                     compraFinal: 0,
+                    // 🔧 ADICIONAR CAMPO qtdePendenteRecebimento PARA O MÓDULO DE RECEBIMENTO
+                    qtdePendenteRecebimento: item.quantidade,
                     statusItem: 'Aguardando Recebimento Final',
                     dataUltimaAtualizacao: firebase.firestore.Timestamp.now()
                 });

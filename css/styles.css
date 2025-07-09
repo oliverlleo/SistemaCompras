@@ -49,9 +49,10 @@ body {
   transform: translateY(-10px);
   transition: all 0.2s ease;
   margin-top: 5px;
+  display: none;
 }
 
-/* Dropdown simples (para botão Compra) */
+/* Dropdown simples (para botão Compra) - Sistema .hidden */
 .dropdown-menu.hidden {
   display: none;
 }
@@ -62,9 +63,14 @@ body {
   visibility: visible;
   transform: translateY(0);
 }
+
+/* Dropdown com container (para botão Análise) - Sistema .open */
+.dropdown-container .dropdown-menu {
+  display: none;
 }
 
 .dropdown-container.open .dropdown-menu {
+  display: block;
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -1156,7 +1162,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   padding: 1rem;

@@ -158,7 +158,7 @@ class FileProcessor {
 
           console.log('Processando arquivo:', file.name, 'tipo:', file.type);
 
-          if (file.type === 'text/csv') {
+          if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
             // Processar CSV - tentar diferentes codificações
             let csvData = e.target.result;
             
@@ -177,7 +177,7 @@ class FileProcessor {
             workbook = XLSX.read(arrayBuffer, { 
               type: 'array',
               codepage: 65001, // UTF-8
-              raw: true
+              raw: false // MUDANÇA: 'false' para usar valores formatados, mais confiável
             });
           }
 
@@ -185,19 +185,15 @@ class FileProcessor {
           const sheetName = workbook.SheetNames[0];
           const sheet = workbook.Sheets[sheetName];
           
-          // Converter para JSON - usar diferentes opções para CSV
-          if (file.type === 'text/csv') {
-            data = XLSX.utils.sheet_to_json(sheet, { 
-              header: 1,
-              raw: false,
-              defval: ''
-            });
-          } else {
-            data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          if (!sheet) {
+              throw new Error('Nenhuma planilha encontrada no arquivo.');
           }
+          
+          // Converter para JSON
+          data = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
 
           if (data.length === 0) {
-            throw new Error('Arquivo está vazio');
+            throw new Error('Arquivo está vazio ou não foi possível ler os dados.');
           }
 
           // Primeira linha são os cabeçalhos
@@ -271,7 +267,7 @@ class FileProcessor {
       };
 
       // Escolher método de leitura baseado no tipo do arquivo
-      if (file.type === 'text/csv') {
+      if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
         // Para CSV, tentar diferentes codificações
         try {
           reader.readAsText(file, 'ISO-8859-1'); // Codificação comum para CSVs brasileiros

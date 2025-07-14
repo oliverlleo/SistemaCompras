@@ -1620,18 +1620,17 @@ body {
   color: #374151;
 }
 
+/* CORREÇÃO PARA ROLAGEM DO MODAL */
 .modal-body {
   flex: 1;
-  overflow: hidden; /* A rolagem será controlada internamente */
-  padding: 1.5rem;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* Oculta a rolagem do corpo principal */
 }
 
-
-/* Modal Form Styles */
 .modal-form-content {
-  display: contents; /* Para que o grid funcione corretamente dentro do flex container */
+  flex: 1;
+  overflow: hidden; /* Oculta a rolagem deste container */
 }
 
 .form-grid {
@@ -1639,14 +1638,14 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
   height: 100%;
-  overflow: hidden; /* Prevenir rolagem no grid */
+  overflow: hidden; /* Oculta a rolagem do grid */
 }
 
 .form-section-modal {
   background: #f8fafc;
   border-radius: 8px;
   padding: 1.5rem;
-  overflow-y: auto; /* Habilitar rolagem aqui */
+  overflow-y: auto; /* Habilita a rolagem APENAS nesta seção */
 }
 
 .preview-section-modal {
@@ -1654,16 +1653,11 @@ body {
   border-radius: 8px;
   padding: 1.5rem;
   border: 1px solid #e2e8f0;
-  overflow-y: hidden; /* Manter sem rolagem */
+  overflow: hidden; /* Garante que esta seção não role */
   display: flex;
   flex-direction: column;
 }
 
-
-.preview-section-modal .preview-content {
-  flex: 1;
-  overflow-y: auto;
-}
 
 /* Form elements in modal */
 .form-section-modal .form-group {
@@ -1802,6 +1796,10 @@ body {
 }
 
 /* Preview table in modal */
+.preview-section-modal .preview-content {
+  flex: 1;
+  overflow-y: auto;
+}
 .preview-section-modal .preview-table {
   width: 100%;
   border-collapse: collapse;

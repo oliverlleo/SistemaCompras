@@ -1622,13 +1622,16 @@ body {
 
 .modal-body {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden; /* A rolagem será controlada internamente */
   padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
 }
+
 
 /* Modal Form Styles */
 .modal-form-content {
-  height: 100%;
+  display: contents; /* Para que o grid funcione corretamente dentro do flex container */
 }
 
 .form-grid {
@@ -1636,14 +1639,14 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
   height: 100%;
-  min-height: 600px;
+  overflow: hidden; /* Prevenir rolagem no grid */
 }
 
 .form-section-modal {
   background: #f8fafc;
   border-radius: 8px;
   padding: 1.5rem;
-  overflow-y: auto;
+  overflow-y: auto; /* Habilitar rolagem aqui */
 }
 
 .preview-section-modal {
@@ -1651,10 +1654,11 @@ body {
   border-radius: 8px;
   padding: 1.5rem;
   border: 1px solid #e2e8f0;
-  overflow-y: auto;
+  overflow-y: hidden; /* Manter sem rolagem */
   display: flex;
   flex-direction: column;
 }
+
 
 .preview-section-modal .preview-content {
   flex: 1;

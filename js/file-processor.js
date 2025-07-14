@@ -3,8 +3,8 @@ class FileProcessor {
   constructor() {
     // Dicionário de variações de nomes de colunas
     this.headerVariations = {
-      codigo: ['codigo', 'cod', 'cód', 'doc', 'code', 'id', 'código', 'c\u00f3digo', 'cdigo', 'c?digo', 'cdigo'],
-      descricao: ['descricao', 'desc', 'descri', 'item', 'produto', 'description', 'produto_descricao', 'descrição', 'descri\u00e7\u00e3o', 'descrio', 'descri??o', 'descricao'],
+      codigo: ['codigo', 'cod', 'cód', 'doc', 'code', 'id', 'código', 'c\u00f3digo', 'c�digo', 'c?digo', 'cdigo'],
+      descricao: ['descricao', 'desc', 'descri', 'item', 'produto', 'description', 'produto_descricao', 'descrição', 'descri\u00e7\u00e3o', 'descri��o', 'descri??o', 'descricao'],
       quantidade: ['quantidade', 'quant', 'qtde', 'qtd', 'qty', 'qt', 'qtd', 'qtd.', 'comprar'],
       altura: ['altura', 'alt', 'a', 'v', 'vertical', 'h'],
       largura: ['largura', 'l', 'larg', 'horizontal', 'w', 'width'],
@@ -108,15 +108,7 @@ class FileProcessor {
       let value = row[columnIndex];
       
       // Processar diferentes tipos de dados
-      if (field === 'codigo') {
-          let rawValue = value ? value.toString().trim() : '';
-          // Verifica se o código começa com "DOC. " (case-insensitive) e extrai a parte relevante
-          if (rawValue.toUpperCase().startsWith('DOC.')) {
-              value = rawValue.substring(4).trim();
-          } else {
-              value = rawValue;
-          }
-      } else if (field === 'quantidade') {
+      if (field === 'quantidade') {
         value = parseFloat(value) || 0;
       } else if (field === 'altura' || field === 'largura') {
         // Altura e largura são valores numéricos

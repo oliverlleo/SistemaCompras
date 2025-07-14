@@ -1,11 +1,11 @@
 // Processador de arquivos CSV/XLSX
 class FileProcessor {
   constructor() {
-    // Dicionário de variações de nomes de colunas
+    // Dicionário de variações de nomes de colunas (com variações de 1 letra de volta)
     this.headerVariations = {
       codigo: ['codigo', 'cod', 'cód', 'doc', 'code', 'id', 'código', 'c\u00f3digo', 'cdigo', 'c?digo', 'cdigo'],
       descricao: ['descricao', 'desc', 'descri', 'item', 'produto', 'description', 'produto_descricao', 'descrição', 'descri\u00e7\u00e3o', 'descrio', 'descri??o', 'descricao'],
-      quantidade: ['quantidade', 'quant', 'qtde', 'qtd', 'qty', 'qt', 'qtd', 'qtd.', 'comprar'],
+      quantidade: ['quantidade', 'quant', 'qtde', 'qtd', 'qty', 'qt', 'qtd', 'qtd.', 'comprar', 'total'],
       altura: ['altura', 'alt', 'a', 'v', 'vertical', 'h'],
       largura: ['largura', 'l', 'larg', 'horizontal', 'w', 'width'],
       cor: ['cor', 'color', 'colours'],
@@ -64,14 +64,19 @@ class FileProcessor {
       for (let i = 0; i < normalizedHeaders.length; i++) {
         const normalizedHeader = normalizedHeaders[i];
         
-        // Verificar se o cabeçalho normalizado está nas variações
-        // Usar includes para busca parcial e também verificar igualdade exata
+        // CORREÇÃO: Lógica de correspondência aprimorada
         const found = variations.some(variation => {
           const normalizedVariation = this.normalizeText(variation);
+          
+          // Se a variação tem apenas uma letra, exige correspondência exata.
+          if (normalizedVariation.length === 1) {
+            return normalizedHeader === normalizedVariation;
+          }
+          
+          // Para variações maiores, mantém a busca flexível.
           return normalizedHeader.includes(normalizedVariation) || 
                  normalizedHeader === normalizedVariation ||
                  normalizedVariation.includes(normalizedHeader) ||
-                 // Busca mais flexível para caracteres corrompidos
                  normalizedHeader.replace(/[^a-z0-9]/g, '').includes(normalizedVariation.replace(/[^a-z0-9]/g, ''));
         });
         
@@ -177,7 +182,7 @@ class FileProcessor {
             workbook = XLSX.read(arrayBuffer, { 
               type: 'array',
               codepage: 65001, // UTF-8
-              raw: false // MUDANÇA: 'false' para usar valores formatados, mais confiável
+              raw: false
             });
           }
 

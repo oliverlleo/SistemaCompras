@@ -66,6 +66,12 @@ class SistemaCompraFinal {
         try {
             this.showLoading('Carregando dados...');
 
+            // 🔧 CORREÇÃO PONTUAL: Verificação da flag precisaCompraFinal (executa apenas uma vez na primeira carga)
+            if (!localStorage.getItem('compraFinalFlagCorrigida')) {
+                await this.corrigirFlagItensExistentes();
+                localStorage.setItem('compraFinalFlagCorrigida', 'true');
+            }
+
             // Passo 1: Buscar TODOS os Pedidos
             console.log('🔄 Carregando pedidos...');
             const pedidosSnapshot = await this.db.collection('pedidos').get();
@@ -77,10 +83,10 @@ class SistemaCompraFinal {
 
             console.log(`📦 ${this.pedidosMap.size} pedidos carregados`);
 
-            // Passo 2: Buscar TODOS os Itens com compraFinal > 0
+            // Passo 2: Buscar APENAS os Itens que realmente precisam de compra final
             console.log('🔄 Carregando itens com compra final...');
             const itensSnapshot = await this.db.collection('itens')
-                .where('compraFinal', '>', 0)
+                .where('precisaCompraFinal', '==', true)
                 .get();
 
             console.log(`📊 ${itensSnapshot.size} itens com compra final encontrados`);
@@ -90,6 +96,12 @@ class SistemaCompraFinal {
             
             for (const doc of itensSnapshot.docs) {
                 const item = { id: doc.id, ...doc.data() };
+                
+                // 🔧 FILTRAR ITENS JÁ FINALIZADOS SEM USAR QUERY COMPOSTA
+                if (item.compraFinalConcluida === true) {
+                    continue; // Pula este item, não adiciona na lista
+                }
+                
                 let dadosEnriquecidos = { ...item };
 
 
@@ -125,6 +137,31 @@ class SistemaCompraFinal {
                 // Se não tem pedidoId, usar campos diretos se existirem  
                 if (!dadosEnriquecidos.clienteNome && item.cliente) {
                     dadosEnriquecidos.clienteNome = item.cliente;
+                }
+
+                // 🔧 CORREÇÃO ESPECÍFICA: SE O ITEM TEM listaMaterial DIRETAMENTE, USAR ELE
+                if (!dadosEnriquecidos.listaMaterial && item.listaMaterial) {
+                    dadosEnriquecidos.listaMaterial = item.listaMaterial;
+                }
+
+                // 🔧 FALLBACK INTELIGENTE: Se ainda não tem listaMaterial, tentar inferir baseado no código ou descrição
+                if (!dadosEnriquecidos.listaMaterial || dadosEnriquecidos.listaMaterial === '') {
+                    // Inferir lista baseado no código/descrição do item
+                    const codigo = (item.codigo || '').toLowerCase();
+                    const descricao = (item.descricao || '').toLowerCase();
+                    
+                    if (codigo.includes('perfil') || descricao.includes('perfil')) {
+                        dadosEnriquecidos.listaMaterial = 'Material Perfil';
+                    } else if (codigo.includes('telha') || descricao.includes('telha')) {
+                        dadosEnriquecidos.listaMaterial = 'Material Cobertura';
+                    } else if (codigo.includes('ferro') || descricao.includes('ferro') || codigo.includes('barra')) {
+                        dadosEnriquecidos.listaMaterial = 'Material Estrutura';
+                    } else if (codigo.includes('cimento') || descricao.includes('cimento') || descricao.includes('concreto')) {
+                        dadosEnriquecidos.listaMaterial = 'Material Base';
+                    } else {
+                        // Se não conseguiu inferir, usar um padrão mais descritivo
+                        dadosEnriquecidos.listaMaterial = 'Material Não Categorizado';
+                    }
                 }
 
 
@@ -555,6 +592,8 @@ class SistemaCompraFinal {
                 batch.update(itemRef, {
                     historicoCompraFinal: firebase.firestore.FieldValue.arrayUnion(registroCompra),
                     compraFinal: 0,
+                    // 🔧 ADICIONAR FLAG DE COMPRA FINALIZADA SEM AFETAR precisaCompraFinal
+                    compraFinalConcluida: true,
                     // 🔧 ADICIONAR CAMPO qtdePendenteRecebimento PARA O MÓDULO DE RECEBIMENTO
                     qtdePendenteRecebimento: item.quantidade,
                     statusItem: 'Aguardando Recebimento Final',
@@ -635,6 +674,47 @@ class SistemaCompraFinal {
         }, 3000);
         
         console.log(`Toast (${type}):`, message);
+    }
+
+    /**
+     * 🔧 CORREÇÃO PONTUAL: Corrigir flag dos itens existentes
+     */
+    async corrigirFlagItensExistentes() {
+        try {
+            console.log('🔧 Verificando se há itens que precisam de correção na flag precisaCompraFinal...');
+            
+            // Buscar TODOS os itens com compraFinal > 0, independente do código
+            const todosItensSnapshot = await this.db.collection('itens')
+                .where('compraFinal', '>', 0)
+                .get();
+
+            console.log(`📊 Encontrados ${todosItensSnapshot.size} itens com compraFinal > 0`);
+
+            const batch = this.db.batch();
+            let corrigidos = 0;
+
+            for (const doc of todosItensSnapshot.docs) {
+                const item = doc.data();
+                const itemRef = this.db.collection('itens').doc(doc.id);
+                
+                // Se o item tem compraFinal > 0, deve ter precisaCompraFinal = true
+                if (!item.precisaCompraFinal) {
+                    batch.update(itemRef, { precisaCompraFinal: true });
+                    corrigidos++;
+                    console.log(`🔧 Corrigindo item ${item.codigo} - adicionando flag precisaCompraFinal`);
+                }
+            }
+
+            if (corrigidos > 0) {
+                await batch.commit();
+                console.log(`✅ ${corrigidos} itens corrigidos com a flag precisaCompraFinal`);
+            } else {
+                console.log('✅ Nenhum item precisava de correção');
+            }
+            
+        } catch (error) {
+            console.error('❌ Erro ao corrigir flags dos itens:', error);
+        }
     }
 }
 

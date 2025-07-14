@@ -43,6 +43,9 @@ class PedidosApp {
       // Configurar auto-completar (será usado no modal)
       this.setupAutoComplete();
 
+      // Configurar análise final
+      this.setupAnaliseFinal();
+
       this.isInitialized = true;
       console.log('Aplicação inicializada com sucesso');
 
@@ -319,6 +322,226 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// Configurar análise final
+app.setupAnaliseFinal = function() {
+  // Event listeners para botões de visualizar listas
+  const btnVerListaInicial = document.getElementById('btnVerListaInicial');
+  const btnVerListaProducao = document.getElementById('btnVerListaProducao');
+  
+  if (btnVerListaInicial) {
+    btnVerListaInicial.addEventListener('click', () => {
+      this.abrirModalListaInicial();
+    });
+  }
+  
+  if (btnVerListaProducao) {
+    btnVerListaProducao.addEventListener('click', () => {
+      this.abrirModalListaProducao();
+    });
+  }
+  
+  // Event listeners para fechar modais
+  const btnFecharModalListaInicial = document.getElementById('btnFecharModalListaInicial');
+  const btnFecharModalListaProducao = document.getElementById('btnFecharModalListaProducao');
+  
+  if (btnFecharModalListaInicial) {
+    btnFecharModalListaInicial.addEventListener('click', () => {
+      this.fecharModal('modalListaInicial');
+    });
+  }
+  
+  if (btnFecharModalListaProducao) {
+    btnFecharModalListaProducao.addEventListener('click', () => {
+      this.fecharModal('modalListaProducao');
+    });
+  }
+  
+  // Fechar modais clicando fora
+  const modalListaInicial = document.getElementById('modalListaInicial');
+  const modalListaProducao = document.getElementById('modalListaProducao');
+  
+  if (modalListaInicial) {
+    modalListaInicial.addEventListener('click', (e) => {
+      if (e.target === modalListaInicial) {
+        this.fecharModal('modalListaInicial');
+      }
+    });
+  }
+  
+  if (modalListaProducao) {
+    modalListaProducao.addEventListener('click', (e) => {
+      if (e.target === modalListaProducao) {
+        this.fecharModal('modalListaProducao');
+      }
+    });
+  }
+  
+  // Carregar dados iniciais
+  this.carregarDadosAnaliseFinal();
+};
+
+// Abrir modal da lista inicial
+app.abrirModalListaInicial = async function() {
+  try {
+    const dados = await this.obterDadosListaInicial();
+    this.preencherModalListaInicial(dados);
+    this.abrirModal('modalListaInicial');
+  } catch (error) {
+    console.error('Erro ao abrir modal lista inicial:', error);
+    this.uiManager.showNotification('Erro ao carregar dados da lista inicial', 'error');
+  }
+};
+
+// Abrir modal da lista produção
+app.abrirModalListaProducao = async function() {
+  try {
+    const dados = await this.obterDadosListaProducao();
+    this.preencherModalListaProducao(dados);
+    this.abrirModal('modalListaProducao');
+  } catch (error) {
+    console.error('Erro ao abrir modal lista produção:', error);
+    this.uiManager.showNotification('Erro ao carregar dados da lista produção', 'error');
+  }
+};
+
+// Obter dados da lista inicial (quantidade original dos pedidos)
+app.obterDadosListaInicial = async function() {
+  const snapshot = await firebase.firestore().collection('pedidos').get();
+  const itens = [];
+  
+  snapshot.forEach(doc => {
+    const pedido = doc.data();
+    if (pedido.materiais) {
+      pedido.materiais.forEach(material => {
+        const item = {
+          codigo: material.codigo,
+          descricao: material.descricao,
+          quantidade: parseFloat(material.quantidade) || 0
+        };
+        
+        // Verificar se já existe um item com o mesmo código
+        const existente = itens.find(i => i.codigo === item.codigo);
+        if (existente) {
+          existente.quantidade += item.quantidade;
+        } else {
+          itens.push(item);
+        }
+      });
+    }
+  });
+  
+  return itens.sort((a, b) => a.codigo.localeCompare(b.codigo));
+};
+
+// Obter dados da lista produção (qtdNecFinal)
+app.obterDadosListaProducao = async function() {
+  const snapshot = await firebase.firestore().collection('analiseItens').get();
+  const itens = [];
+  
+  snapshot.forEach(doc => {
+    const item = doc.data();
+    if (item.qtdNecFinal !== undefined && item.qtdNecFinal !== null) {
+      itens.push({
+        codigo: item.codigo,
+        descricao: item.descricao,
+        quantidade: parseFloat(item.qtdNecFinal) || 0
+      });
+    }
+  });
+  
+  return itens.sort((a, b) => a.codigo.localeCompare(b.codigo));
+};
+
+// Preencher modal lista inicial
+app.preencherModalListaInicial = function(dados) {
+  const totalItens = dados.length;
+  const quantidadeTotal = dados.reduce((acc, item) => acc + item.quantidade, 0);
+  
+  // Atualizar resumo
+  document.getElementById('resumoItensListaInicial').textContent = totalItens;
+  document.getElementById('resumoQuantidadeListaInicial').textContent = quantidadeTotal.toFixed(2);
+  
+  // Preencher tabela
+  const tbody = document.getElementById('tabelaListaInicial');
+  tbody.innerHTML = '';
+  
+  dados.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${item.codigo}</td>
+      <td>${item.descricao}</td>
+      <td>${item.quantidade.toFixed(2)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+};
+
+// Preencher modal lista produção
+app.preencherModalListaProducao = function(dados) {
+  const totalItens = dados.length;
+  const quantidadeTotal = dados.reduce((acc, item) => acc + item.quantidade, 0);
+  
+  // Atualizar resumo
+  document.getElementById('resumoItensListaProducao').textContent = totalItens;
+  document.getElementById('resumoQuantidadeListaProducao').textContent = quantidadeTotal.toFixed(2);
+  
+  // Preencher tabela
+  const tbody = document.getElementById('tabelaListaProducao');
+  tbody.innerHTML = '';
+  
+  dados.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${item.codigo}</td>
+      <td>${item.descricao}</td>
+      <td>${item.quantidade.toFixed(2)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+};
+
+// Carregar dados para os cards
+app.carregarDadosAnaliseFinal = async function() {
+  try {
+    // Dados lista inicial
+    const dadosListaInicial = await this.obterDadosListaInicial();
+    const totalItensInicial = dadosListaInicial.length;
+    const quantidadeTotalInicial = dadosListaInicial.reduce((acc, item) => acc + item.quantidade, 0);
+    
+    document.getElementById('totalItensListaInicial').textContent = totalItensInicial;
+    document.getElementById('quantidadeTotalListaInicial').textContent = quantidadeTotalInicial.toFixed(2);
+    
+    // Dados lista produção
+    const dadosListaProducao = await this.obterDadosListaProducao();
+    const totalItensProducao = dadosListaProducao.length;
+    const quantidadeTotalProducao = dadosListaProducao.reduce((acc, item) => acc + item.quantidade, 0);
+    
+    document.getElementById('totalItensListaProducao').textContent = totalItensProducao;
+    document.getElementById('quantidadeTotalListaProducao').textContent = quantidadeTotalProducao.toFixed(2);
+    
+  } catch (error) {
+    console.error('Erro ao carregar dados análise final:', error);
+  }
+};
+
+// Abrir modal
+app.abrirModal = function(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+};
+
+// Fechar modal
+app.fecharModal = function(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+  }
+};
 
 // Disponibilizar globalmente para debug
 window.PedidosApp = app;

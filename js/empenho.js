@@ -251,8 +251,8 @@ class SistemaEmpenho {
         itensParaRenderizar.forEach(item => {
             const saldos = this.calcularSaldos(item);
             
-            // Só renderizar se houver saldo disponível
-            if (saldos.saldoTotalDisponivel > 0) {
+            // Só renderizar se houver saldo disponível em Estoque OU em Recebido
+            if (saldos.saldoDisponivelEstoque > 0 || saldos.saldoDisponivelRecebido > 0) {
                 linhas.push(this.criarLinhaItem(item, saldos));
             }
         });
@@ -300,14 +300,21 @@ class SistemaEmpenho {
         }, 0);
 
         // Calcular saldos disponíveis
-        const saldoDisponivelEstoque = Math.max(0, (item.quantidade || 0) - totalEmpenhadoDoEstoque);
+        // ATUALIZAÇÃO: Usar o campo estoqueDisponivel diretamente do Firebase
+        let saldoDisponivelEstoque = Math.max(0, item.estoqueDisponivel || 0);
         const saldoDisponivelRecebido = Math.max(0, totalRecebido - totalEmpenhadoDoRecebido);
+        
+        // LIMITAÇÃO: Não permitir que o saldo disponível do estoque exceda a quantidade necessária
+        const qtdNecessaria = item.quantidade || item.QtdItemNecFinal || 0;
+        const qtdRestante = Math.max(0, qtdNecessaria - totalEmpenhado);
+        saldoDisponivelEstoque = Math.min(saldoDisponivelEstoque, qtdRestante);
+        
         const saldoTotalDisponivel = saldoDisponivelEstoque + saldoDisponivelRecebido;
 
         return {
-            saldoDisponivelEstoque: Math.max(0, saldoDisponivelEstoque),
-            saldoDisponivelRecebido: Math.max(0, saldoDisponivelRecebido),
-            saldoTotalDisponivel: Math.max(0, saldoTotalDisponivel),
+            saldoDisponivelEstoque: saldoDisponivelEstoque,
+            saldoDisponivelRecebido: saldoDisponivelRecebido,
+            saldoTotalDisponivel: saldoTotalDisponivel,
             totalEmpenhado
         };
     }
@@ -319,7 +326,7 @@ class SistemaEmpenho {
         const isParcial = item.statusItem === 'Parcialmente Empenhado';
         const rowClass = isParcial ? 'row-parcial' : '';
         const isEmpenhado = item.statusItem === 'Empenhado';
-        const botaoDisabled = isEmpenhado || saldos.saldoTotalDisponivel === 0 ? 'disabled' : '';
+        const botaoDisabled = isEmpenhado || (saldos.saldoDisponivelEstoque === 0 && saldos.saldoDisponivelRecebido === 0) ? 'disabled' : '';
 
         return `
             <tr class="${rowClass}" data-item-id="${item.id}">

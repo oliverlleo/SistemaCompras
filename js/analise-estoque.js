@@ -510,8 +510,15 @@ class AnaliseEstoqueManager {
         // Limpar tabela
         tableBody.innerHTML = '';
 
-        // Renderizar cada item
-        this.itensPedido.forEach((item, index) => {
+        // 🎯 NOVA FUNCIONALIDADE: Filtrar itens que não devem aparecer na análise
+        const itensParaExibir = this.itensPedido.filter(item => {
+            return !this.isItemTotalmenteCompleto(item);
+        });
+
+        console.log(`📊 Filtro aplicado: ${this.itensPedido.length} total, ${itensParaExibir.length} para exibir`);
+
+        // Renderizar apenas itens não completos
+        itensParaExibir.forEach((item, index) => {
             const row = this.createItemRow(item, index);
             tableBody.appendChild(row);
         });
@@ -519,6 +526,36 @@ class AnaliseEstoqueManager {
         // Mostrar seção
         confrontoSection.classList.add('visible');
         this.updateProgressStats();
+    }
+
+    /**
+     * 🎯 NOVA FUNÇÃO: Verifica se um item está totalmente completo
+     * Um item está completo quando a soma de alocado + compra >= quantidade necessária
+     * OU quando possui a flag ocultarDaAnalise = true salva no Firebase
+     */
+    isItemTotalmenteCompleto(item) {
+        if (!item) return false;
+
+        // Verificar primeiro se existe a flag no Firebase
+        if (item.ocultarDaAnalise === true) {
+            console.log(`🎯 Item ${item.codigo} oculto por flag do Firebase`);
+            return true;
+        }
+
+        const qtdeNecessaria = item.quantidade || 0;
+        const qtdeAlocar = item.quantidadeAlocar || 0;
+        const qtdeComprar = item.quantidadeComprar || 0;
+        
+        // Verificar se as quantidades alocadas + compradas atendem à necessidade total
+        const qtdeTotalProcessada = qtdeAlocar + qtdeComprar;
+        const isCompleto = qtdeTotalProcessada >= qtdeNecessaria;
+
+        // Log para debug (remover em produção se necessário)
+        if (isCompleto) {
+            console.log(`✅ Item ${item.codigo} completo: Necessário=${qtdeNecessaria}, Alocado=${qtdeAlocar}, Compra=${qtdeComprar}, Total=${qtdeTotalProcessada}`);
+        }
+
+        return isCompleto;
     }
 
     createItemRow(item, index) {
@@ -803,6 +840,9 @@ class AnaliseEstoqueManager {
                 }
             }
 
+            // Declarar itemLocal no início para estar disponível em todo o escopo
+            let itemLocal = null;
+            
             // Usar set com merge para funcionar mesmo se documento não existir
             const itemRef = db.collection('itens').doc(itemId);
             try {
@@ -824,7 +864,9 @@ class AnaliseEstoqueManager {
                     // 🔧 BUSCAR CAMPO tipoProjeto DO PEDIDO PAI E SALVAR AMBOS OS CAMPOS NO ITEM
                     clienteNome: dadosPedidoPai.clienteNome || item.clienteNome,
                     projetoNome: dadosPedidoPai.tipoProjeto || item.projetoNome,
-                    tipoProjeto: dadosPedidoPai.tipoProjeto || item.tipoProjeto
+                    tipoProjeto: dadosPedidoPai.tipoProjeto || item.tipoProjeto,
+                    // 🎯 NOVA FUNCIONALIDADE: Flag para ocultar da análise quando completo
+                    ocultarDaAnalise: qtdeTotalProcessada >= qtdeNecessaria
                 };
 
                 await itemRef.set(updateData, { merge: true });
@@ -832,7 +874,7 @@ class AnaliseEstoqueManager {
                 console.log('✅ Item salvo com sucesso usando set com merge');
                 
                 // Atualizar o item na lista local para refletir os novos valores
-                const itemLocal = this.itensPedido.find(i => i.id === itemId);
+                itemLocal = this.itensPedido.find(i => i.id === itemId);
                 if (itemLocal) {
                     itemLocal.statusItem = novoStatus;
                     itemLocal.quantidadeAlocar = novaQtdeAlocar;
@@ -870,10 +912,18 @@ class AnaliseEstoqueManager {
                 console.log('✅ Novo registro de estoque criado');
             }
 
-            // Atualizar interface
+            // 🎯 NOVA FUNCIONALIDADE: Atualizar interface e re-renderizar tabela se item completo
+            const itemCompleto = this.isItemTotalmenteCompleto(itemLocal);
+            
             this.updateItemStatus(itemId, novoStatus);
             this.updateProgressStats();
             this.checkAnaliseCompleta();
+
+            // Se o item foi completado, re-renderizar a tabela para ocultá-lo
+            if (itemCompleto) {
+                console.log(`🎯 Item ${item.codigo} completado - re-renderizando tabela`);
+                this.renderTabelaConfronto();
+            }
 
             if (showMessage) {
                 this.showMessage(`✅ Item ${item.codigo} alocado do estoque com sucesso!`, 'success');
@@ -1599,16 +1649,19 @@ class AnaliseEstoqueManager {
                 clienteNome: dadosPedidoPai.clienteNome || item.clienteNome,
                 projetoNome: dadosPedidoPai.tipoProjeto || item.projetoNome,
                 tipoProjeto: dadosPedidoPai.tipoProjeto || item.tipoProjeto,
-                // Campo especial para marcar compra final
-                compraFinal: novaQtdeComprar
+                // 🎯 NOVA FUNCIONALIDADE: Flag para ocultar da análise quando completo
+                ocultarDaAnalise: qtdeTotalProcessada >= qtdeNecessaria
             };
 
+            // Declarar itemLocal no início para estar disponível em todo o escopo
+            let itemLocal = null;
+            
             try {
                 await db.collection('itens').doc(itemId).set(setData, { merge: true });
                 console.log(`✅ Item atualizado: ${novoStatus} - Comprar: ${novaQtdeComprar}, Alocar: ${qtdeAlocarExistente}`);
                 
                 // Atualizar o item na lista local para refletir os novos valores
-                const itemLocal = this.itensPedido.find(i => i.id === itemId);
+                itemLocal = this.itensPedido.find(i => i.id === itemId);
                 if (itemLocal) {
                     itemLocal.statusItem = novoStatus;
                     itemLocal.quantidadeComprar = novaQtdeComprar;
@@ -1620,10 +1673,18 @@ class AnaliseEstoqueManager {
                 throw err;
             }
 
-            // Atualizar interface
+            // 🎯 NOVA FUNCIONALIDADE: Atualizar interface e re-renderizar tabela se item completo
+            const itemCompleto = this.isItemTotalmenteCompleto(itemLocal);
+            
             this.updateItemStatus(itemId, novoStatus);
             this.updateProgressStats();
             this.checkAnaliseCompleta();
+
+            // Se o item foi completado, re-renderizar a tabela para ocultá-lo
+            if (itemCompleto) {
+                console.log(`🎯 Item ${item.codigo} completado - re-renderizando tabela`);
+                this.renderTabelaConfronto();
+            }
 
         } catch (error) {
             console.error('❌ Erro ao solicitar compra:', error);

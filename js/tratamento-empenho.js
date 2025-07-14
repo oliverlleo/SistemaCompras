@@ -195,6 +195,8 @@ class SistemaTratamentoEmpenho {
 
             this.selectProjeto.disabled = false;
             console.log(`✅ ${projetosSet.size} projetos encontrados para ${clienteSelecionado}`);
+            
+            // Código de teste removido - funcionando corretamente
 
         } catch (error) {
             console.error('❌ Erro ao carregar projetos:', error);
@@ -246,6 +248,8 @@ class SistemaTratamentoEmpenho {
 
             this.selectLista.disabled = false;
             console.log(`✅ ${listasSet.size} listas encontradas para ${clienteSelecionado} - ${projetoSelecionado}`);
+            
+            // Código de teste removido - funcionando corretamente
 
         } catch (error) {
             console.error('❌ Erro ao carregar listas:', error);
@@ -287,12 +291,6 @@ class SistemaTratamentoEmpenho {
             for (const doc of itensSnapshot.docs) {
                 const item = { id: doc.id, ...doc.data() };
                 
-                // Pular itens que já foram processados na análise final
-                if (item.analiseFinalRealizada) {
-                    console.log(`⏭️ Item ${item.codigo} já foi processado na análise final - pulando`);
-                    continue;
-                }
-                
                 // Buscar dados do pedido pai
                 if (item.pedidoId) {
                     const pedidoSnapshot = await this.db.collection('pedidos').doc(item.pedidoId).get();
@@ -332,7 +330,7 @@ class SistemaTratamentoEmpenho {
             if (this.itensEmpenhados.length === 0) {
                 this.showToast(
                     'Nenhum item empenhado disponível para análise final. ' +
-                    'Todos os itens desta combinação já foram processados ou não há itens empenhados.',
+                    'Não há itens empenhados para esta combinação de cliente, projeto e lista.',
                     'info'
                 );
                 // Esconder seções se não há itens
@@ -341,12 +339,36 @@ class SistemaTratamentoEmpenho {
                 return;
             }
 
-            // Mostrar tabela com itens empenhados (sem comparação ainda)
+            // Verificar itens já processados vs. não processados
+            const itensJaProcessados = this.itensEmpenhados.filter(item => item.analiseFinalRealizada === true);
+            const itensNaoProcessados = this.itensEmpenhados.filter(item => item.analiseFinalRealizada !== true);
+            
+            console.log(`✅ ${itensJaProcessados.length} itens já processados anteriormente`);
+            console.log(`✅ ${itensNaoProcessados.length} itens não processados`);
+
+            // Mostrar tabela com itens empenhados
             this.renderizarTabelaItensEmpenhados();
 
-            // Mostrar seção de upload
-            this.uploadSection.classList.remove('hidden');
-            this.showToast(`${this.itensEmpenhados.length} itens empenhados carregados. Agora faça o upload da lista final.`, 'success');
+            // Mostrar mensagem apropriada baseada no status dos itens
+            if (itensJaProcessados.length > 0 && itensNaoProcessados.length > 0) {
+                this.showToast(
+                    `${this.itensEmpenhados.length} itens empenhados carregados ` +
+                    `(${itensJaProcessados.length} já processados, ${itensNaoProcessados.length} pendentes). ` +
+                    `Para os itens pendentes, faça o upload da lista final.`,
+                    'success'
+                );
+            } else if (itensNaoProcessados.length > 0) {
+                this.showToast(
+                    `${itensNaoProcessados.length} itens empenhados carregados. Agora faça o upload da lista final.`,
+                    'success'
+                );
+            } else {
+                this.showToast(
+                    `${itensJaProcessados.length} itens já processados anteriormente foram carregados. ` +
+                    `Os dados mostrados refletem o processamento anterior.`,
+                    'info'
+                );
+            }
 
         } catch (error) {
             console.error('❌ Erro ao carregar itens empenhados:', error);
@@ -430,6 +452,15 @@ class SistemaTratamentoEmpenho {
         try {
             this.showLoading('Processando planilha...');
 
+            // Identificar itens não processados (precisam ser processados)
+            const itensNaoProcessados = this.itensEmpenhados.filter(item => item.analiseFinalRealizada !== true);
+            
+            // Se não houver itens para processar, mostrar mensagem e não fazer nada
+            if (itensNaoProcessados.length === 0) {
+                this.showToast('Não há itens pendentes para processar. Todos os itens já foram analisados anteriormente.', 'info');
+                return;
+            }
+
             // Usar FileProcessor para ler o arquivo
             const fileProcessor = new FileProcessor();
             const result = await fileProcessor.processFile(this.uploadedFile);
@@ -449,7 +480,10 @@ class SistemaTratamentoEmpenho {
                 this.showToast(`Arquivo processado com ${result.errors.length} avisos. Verifique o console.`, 'warning');
             }
 
-            // Executar confronto
+            // Primeiro salvar as quantidades no Firebase
+            await this.salvarQuantidadesNoFirebase();
+            
+            // Depois executar confronto
             this.executarConfronto();
 
         } catch (error) {
@@ -457,6 +491,45 @@ class SistemaTratamentoEmpenho {
             this.showToast('Erro ao processar planilha: ' + error.message, 'error');
         } finally {
             this.hideLoading();
+        }
+    }
+
+    async salvarQuantidadesNoFirebase() {
+        console.log('💾 Salvando quantidades do arquivo no Firebase...');
+        
+        try {
+            const batch = this.db.batch();
+            
+            // Para cada item da lista final, salvar no Firebase
+            this.listaFinal.forEach(itemFinal => {
+                // Encontrar o item empenhado correspondente
+                const itemEmpenhado = this.itensEmpenhados.find(emp => emp.codigo === itemFinal.codigo);
+                
+                if (itemEmpenhado) {
+                    const itemRef = this.db.collection('itens').doc(itemEmpenhado.id);
+                    batch.update(itemRef, {
+                        qtdNecFinal: itemFinal.quantidade,
+                        QtdItemNecFinal: itemFinal.quantidade
+                    });
+                    console.log(`💾 Salvando qtdNecFinal e QtdItemNecFinal para ${itemFinal.codigo}: ${itemFinal.quantidade}`);
+                }
+            });
+            
+            await batch.commit();
+            console.log('✅ Quantidades salvas no Firebase');
+            
+            // Atualizar os dados locais dos itens empenhados
+            this.itensEmpenhados.forEach(item => {
+                const itemFinal = this.listaFinal.find(final => final.codigo === item.codigo);
+                if (itemFinal) {
+                    item.qtdNecFinal = itemFinal.quantidade;
+                    item.QtdItemNecFinal = itemFinal.quantidade;
+                }
+            });
+            
+        } catch (error) {
+            console.error('❌ Erro ao salvar quantidades no Firebase:', error);
+            throw error;
         }
     }
 
@@ -478,82 +551,83 @@ class SistemaTratamentoEmpenho {
 
         // Cenário 1 e 2: Itens empenhados
         itensEmpenhadosMap.forEach((itemEmpenhado, codigo) => {
-            const itemFinal = listaFinalMap.get(codigo);
+            // SEMPRE usar qtdNecFinal do Firebase
+            const qtdNecessariaFinal = itemEmpenhado.qtdNecFinal || 0;
             
-            if (!itemFinal) {
-                // Cenário 1: Item empenhado mas não existe na lista final
+            // Cenário 2 e 3: Item existe em ambas as listas
+            const diferenca = itemEmpenhado.totalEmpenhado - qtdNecessariaFinal;
+            
+            if (qtdNecessariaFinal === 0) {
+                // Cenário 1: Item empenhado mas qtdNecFinal é 0 (não necessário)
                 this.tabelaConfronto.push({
                     codigo: itemEmpenhado.codigo,
                     descricao: itemEmpenhado.descricao,
                     qtdEmpenhada: itemEmpenhado.totalEmpenhado,
-                    qtdNecessaria: 0,
+                    qtdNecessaria: qtdNecessariaFinal,
                     diferenca: itemEmpenhado.totalEmpenhado,
                     cenario: 1,
                     acaoSugerida: 'Devolver ao Estoque',
                     itemEmpenhado: itemEmpenhado,
                     itemFinal: null
                 });
+            } else if (diferenca > 0) {
+                // Cenário 2: Empenhado > Necessário
+                this.tabelaConfronto.push({
+                    codigo: itemEmpenhado.codigo,
+                    descricao: itemEmpenhado.descricao,
+                    qtdEmpenhada: itemEmpenhado.totalEmpenhado,
+                    qtdNecessaria: qtdNecessariaFinal,
+                    diferenca: diferenca,
+                    cenario: 2,
+                    acaoSugerida: `Devolver ${diferenca} unidades ao Estoque`,
+                    itemEmpenhado: itemEmpenhado,
+                    itemFinal: null
+                });
+            } else if (diferenca < 0) {
+                // Cenário 3: Empenhado < Necessário
+                this.tabelaConfronto.push({
+                    codigo: itemEmpenhado.codigo,
+                    descricao: itemEmpenhado.descricao,
+                    qtdEmpenhada: itemEmpenhado.totalEmpenhado,
+                    qtdNecessaria: qtdNecessariaFinal,
+                    diferenca: diferenca,
+                    cenario: 3,
+                    acaoSugerida: `Gerar Compra Final de ${Math.abs(diferenca)} unidades`,
+                    itemEmpenhado: itemEmpenhado,
+                    itemFinal: null
+                });
             } else {
-                // Cenário 2 e 3: Item existe em ambas as listas
-                const diferenca = itemEmpenhado.totalEmpenhado - itemFinal.quantidade;
-                
-                if (diferenca > 0) {
-                    // Cenário 2: Empenhado > Necessário
-                    this.tabelaConfronto.push({
-                        codigo: itemEmpenhado.codigo,
-                        descricao: itemEmpenhado.descricao,
-                        qtdEmpenhada: itemEmpenhado.totalEmpenhado,
-                        qtdNecessaria: itemFinal.quantidade,
-                        diferenca: diferenca,
-                        cenario: 2,
-                        acaoSugerida: `Devolver ${diferenca} unidades ao Estoque`,
-                        itemEmpenhado: itemEmpenhado,
-                        itemFinal: itemFinal
-                    });
-                } else if (diferenca < 0) {
-                    // Cenário 3: Empenhado < Necessário
-                    this.tabelaConfronto.push({
-                        codigo: itemEmpenhado.codigo,
-                        descricao: itemEmpenhado.descricao,
-                        qtdEmpenhada: itemEmpenhado.totalEmpenhado,
-                        qtdNecessaria: itemFinal.quantidade,
-                        diferenca: diferenca,
-                        cenario: 3,
-                        acaoSugerida: `Gerar Compra Final de ${Math.abs(diferenca)} unidades`,
-                        itemEmpenhado: itemEmpenhado,
-                        itemFinal: itemFinal
-                    });
-                } else {
-                    // Diferença = 0: Item ok, sem ação necessária
-                    this.tabelaConfronto.push({
-                        codigo: itemEmpenhado.codigo,
-                        descricao: itemEmpenhado.descricao,
-                        qtdEmpenhada: itemEmpenhado.totalEmpenhado,
-                        qtdNecessaria: itemFinal.quantidade,
-                        diferenca: 0,
-                        cenario: 0,
-                        acaoSugerida: 'Nenhuma ação necessária',
-                        itemEmpenhado: itemEmpenhado,
-                        itemFinal: itemFinal
-                    });
-                }
+                // Diferença = 0: Item ok, sem ação necessária
+                this.tabelaConfronto.push({
+                    codigo: itemEmpenhado.codigo,
+                    descricao: itemEmpenhado.descricao,
+                    qtdEmpenhada: itemEmpenhado.totalEmpenhado,
+                    qtdNecessaria: qtdNecessariaFinal,
+                    diferenca: 0,
+                    cenario: 0,
+                    acaoSugerida: 'Nenhuma ação necessária',
+                    itemEmpenhado: itemEmpenhado,
+                    itemFinal: null
+                });
             }
         });
 
-        // Cenário 4: Itens da lista final que não foram empenhados
+        // Cenário 4: Itens da lista final que não foram empenhados - NECESSIDADE DE COMPRA
         listaFinalMap.forEach((itemFinal, codigo) => {
+            // Se o item da lista final NÃO existe nos itens empenhados
             if (!itensEmpenhadosMap.has(codigo)) {
                 this.tabelaConfronto.push({
                     codigo: itemFinal.codigo,
-                    descricao: itemFinal.descricao || 'N/A',
+                    descricao: itemFinal.descricao || `Item ${itemFinal.codigo}`,
                     qtdEmpenhada: 0,
                     qtdNecessaria: itemFinal.quantidade,
-                    diferenca: null,
+                    diferenca: -itemFinal.quantidade,
                     cenario: 4,
-                    acaoSugerida: 'Criar Item e Gerar Compra Final',
+                    acaoSugerida: `Gerar Compra Final de ${itemFinal.quantidade} unidades`,
                     itemEmpenhado: null,
                     itemFinal: itemFinal
                 });
+                console.log(`📋 Cenário 4 - Item novo encontrado: ${codigo} (${itemFinal.quantidade} unidades)`);
             }
         });
 
@@ -565,30 +639,101 @@ class SistemaTratamentoEmpenho {
         const tbody = document.getElementById('tabelaConfronto');
         tbody.innerHTML = '';
 
-        // Renderizar apenas os itens empenhados (sem comparação)
+        // Renderizar os itens empenhados (mostrando qtdNecFinal se já existir)
         this.itensEmpenhados.forEach((item, index) => {
+            // Verificar se o item já foi analisado anteriormente
+            const jaAnalisado = item.analiseFinalRealizada === true;
+            // CORREÇÃO: Verificar se qtdNecFinal existe e não é null/undefined
+            const temQtdNecFinal = item.qtdNecFinal !== undefined && item.qtdNecFinal !== null;
+            const qtdNecessaria = temQtdNecFinal ? item.qtdNecFinal : '-';
+            const diferenca = temQtdNecFinal ? item.totalEmpenhado - item.qtdNecFinal : '-';
+            
+            // Debug removido - funcionando corretamente
+            
             const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="font-mono">${item.codigo}</td>
-                <td>${item.descricao}</td>
-                <td class="text-center">${item.totalEmpenhado}</td>
-                <td class="text-center text-gray-400">-</td>
-                <td class="text-center text-gray-400">-</td>
-                <td>
-                    <span class="status-badge status-pendente">
-                        Aguardando comparação
-                    </span>
-                </td>
-                <td>
-                    <span class="text-gray-400">Pendente</span>
-                </td>
-            `;
+            
+            // Para itens já analisados OU que já tenham qtdNecFinal, mostrar informações completas
+            if (jaAnalisado || temQtdNecFinal) {
+                const classDiferenca = diferenca > 0 ? 'difference-positive' : 
+                                      diferenca < 0 ? 'difference-negative' : 
+                                      diferenca === 0 ? 'difference-zero' : '';
+                
+                let acaoSugerida = 'Nenhuma ação necessária';
+                let classeStatus = 'status-criar';
+                
+                if (diferenca > 0) {
+                    acaoSugerida = `Devolver ${diferenca} unidades ao Estoque`;
+                    classeStatus = 'status-devolver';
+                } else if (diferenca < 0) {
+                    acaoSugerida = `Gerar Compra Final de ${Math.abs(diferenca)} unidades`;
+                    classeStatus = 'status-comprar';
+                }
+                
+                tr.innerHTML = `
+                    <td class="font-mono">${item.codigo}</td>
+                    <td>${item.descricao}</td>
+                    <td class="text-center">${item.totalEmpenhado}</td>
+                    <td class="text-center">${qtdNecessaria}</td>
+                    <td class="text-center ${classDiferenca}">
+                        ${diferenca !== '-' ? diferenca : '-'}
+                    </td>
+                    <td>
+                        <span class="status-badge ${classeStatus}">
+                            ${acaoSugerida}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="text-green-600 font-medium">✓ Já processado</span>
+                    </td>
+                `;
+            } else {
+                // Para itens não analisados, mostrar aguardando comparação
+                tr.innerHTML = `
+                    <td class="font-mono">${item.codigo}</td>
+                    <td>${item.descricao}</td>
+                    <td class="text-center">${item.totalEmpenhado}</td>
+                    <td class="text-center text-gray-400">-</td>
+                    <td class="text-center text-gray-400">-</td>
+                    <td>
+                        <span class="status-badge status-pendente">
+                            Aguardando comparação
+                        </span>
+                    </td>
+                    <td>
+                        <span class="text-gray-400">Pendente</span>
+                    </td>
+                `;
+            }
+            
             tbody.appendChild(tr);
         });
 
-        this.totalItensConfronto.textContent = `${this.itensEmpenhados.length} itens empenhados`;
+        // Verificar se há itens já analisados OU com qtdNecFinal
+        const itensJaAnalisados = this.itensEmpenhados.filter(item => 
+            item.analiseFinalRealizada === true || (item.qtdNecFinal !== undefined && item.qtdNecFinal !== null)
+        );
+        const itensNaoAnalisados = this.itensEmpenhados.filter(item => 
+            item.analiseFinalRealizada !== true && (item.qtdNecFinal === undefined || item.qtdNecFinal === null)
+        );
+        
+        if (itensJaAnalisados.length > 0) {
+            this.totalItensConfronto.textContent = `${this.itensEmpenhados.length} itens (${itensJaAnalisados.length} já processados, ${itensNaoAnalisados.length} pendentes)`;
+        } else {
+            this.totalItensConfronto.textContent = `${this.itensEmpenhados.length} itens empenhados`;
+        }
+        
         this.resultsSection.classList.remove('hidden');
-        this.btnConfirmarTratamento.disabled = true; // Desabilitar até comparar
+        
+        // Habilitar o botão de confirmar apenas se houver itens não analisados
+        this.btnConfirmarTratamento.disabled = itensNaoAnalisados.length === 0;
+        
+        // Se tiver apenas itens já analisados, mostrar mensagem informativa
+        if (itensNaoAnalisados.length === 0 && itensJaAnalisados.length > 0) {
+            this.showToast('Todos os itens já foram processados anteriormente. Caso queira reprocessar, use a função de novo tratamento.', 'info');
+            this.uploadSection.classList.add('hidden');
+        } else {
+            this.uploadSection.classList.remove('hidden');
+        }
     }
 
     renderizarTabelaConfronto() {
@@ -716,6 +861,7 @@ class SistemaTratamentoEmpenho {
             statusItem: 'Disponível',
             analiseFinalRealizada: true,
             dataAnalise: firebase.firestore.Timestamp.now(),
+            qtdNecFinal: 0, // Definir qtdNecFinal como 0 para devolução
             historicoEmpenhos: firebase.firestore.FieldValue.arrayUnion({
                 tipo: 'devolucao',
                 qtde: -quantidade,
@@ -734,6 +880,9 @@ class SistemaTratamentoEmpenho {
         const batch = this.db.batch();
         const itemRef = this.db.collection('itens').doc(item.id);
 
+        // Calcular a quantidade necessária final (total empenhado - diferença)
+        const qtdNecessariaFinal = item.totalEmpenhado - diferenca;
+
         // Criar registro de devolução parcial
         const devolucao = {
             qtde: diferenca,
@@ -748,6 +897,7 @@ class SistemaTratamentoEmpenho {
             statusItem: 'Separado para Produção', // Avança para próximo estágio
             analiseFinalRealizada: true,
             dataAnalise: firebase.firestore.Timestamp.now(),
+            qtdNecFinal: qtdNecessariaFinal, // Salvar a quantidade necessária final
             historicoEmpenhos: firebase.firestore.FieldValue.arrayUnion({
                 tipo: 'devolucao_parcial',
                 qtde: -diferenca,
@@ -769,8 +919,10 @@ class SistemaTratamentoEmpenho {
         // Atualizar item com campo de compra final
         batch.update(itemRef, {
             compraFinal: quantidadeFaltante,
+            qtdNecFinal: quantidadeFaltante, // Salvar a quantidade necessária final no campo qtdNecFinal
             statusItem: 'Separado para Produção', // Avança para próximo estágio
             analiseFinalRealizada: true,
+            precisaCompraFinal: true, // 🔧 NOVA FLAG: Indica que este item realmente precisa aparecer na tela de compra final
             dataAnalise: firebase.firestore.Timestamp.now(),
             historicoCompraFinal: firebase.firestore.FieldValue.arrayUnion({
                 qtde: quantidadeFaltante,
@@ -801,8 +953,11 @@ class SistemaTratamentoEmpenho {
             listaMaterial: lista,
             statusItem: 'Separado para Produção',
             compraFinal: itemFinal.quantidade,
+            qtdNecFinal: itemFinal.quantidade, // Salvar a quantidade necessária final no campo qtdNecFinal
+            QtdItemNecFinal: itemFinal.quantidade, // Salvar a quantidade necessária final no campo QtdItemNecFinal
             criadoPorAnalise: true,
             analiseFinalRealizada: true,
+            precisaCompraFinal: true, // 🔧 NOVA FLAG: Indica que este item realmente precisa aparecer na tela de compra final
             dataAnalise: firebase.firestore.Timestamp.now(),
             historicoCompraFinal: [{
                 qtde: itemFinal.quantidade,
@@ -847,12 +1002,12 @@ class SistemaTratamentoEmpenho {
                     
                     // Salvar Qtd. Necessária (Final) se o item tem correspondente na lista final
                     if (linha.itemFinal) {
-                        updateData.qtdNecessariaFinal = linha.qtdNecessaria;
+                        updateData.qtdNecFinal = linha.qtdNecessaria;
                         updateData.motivoAnalise = `Quantidade necessária final definida: ${linha.qtdNecessaria}`;
                         console.log(`💾 Salvando Qtd. Necessária Final para ${linha.codigo}: ${linha.qtdNecessaria}`);
                     } else {
                         // Item empenhado mas não está na lista final
-                        updateData.qtdNecessariaFinal = 0;
+                        updateData.qtdNecFinal = 0;
                         updateData.motivoAnalise = 'Item não necessário na lista final';
                         console.log(`💾 Salvando Qtd. Necessária Final para ${linha.codigo}: 0 (não está na lista final)`);
                     }

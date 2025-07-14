@@ -167,33 +167,33 @@ class RecebimentoFinalManager {
             console.log('🧪 Criando item de teste para compra final...');
             try {
                 const itemTeste = {
-                    codigo: 'TESTE-FINAL-001',
-                    descricao: 'Item de teste para recebimento final',
-                    clienteNome: 'Cliente Teste',
-                    tipoProjeto: 'Projeto Teste',
-                    listaMaterial: 'Lista Teste',
-                    fornecedor: 'Fornecedor Teste',
-                    prazoEntrega: new Date().toISOString().split('T')[0],
-                    qtdePendenteRecebimento: 10,
+                    codigo: 'TESTE-FORNECEDOR-123',
+                    descricao: 'TESTE - Item com fornecedor explícito no histórico',
+                    clienteNome: 'Leonardo Cliente',
+                    tipoProjeto: 'Projeto Leonardo',
+                    listaMaterial: 'Lista Leonardo',
+                    // 🔧 NÃO colocar fornecedor no nível do item, apenas no histórico
+                    qtdePendenteRecebimento: 25,
                     statusItem: 'Aguardando Recebimento Final',
                     dataUltimaAtualizacao: firebase.firestore.Timestamp.now(),
                     historicoCompraFinal: [{
                         dataCompra: firebase.firestore.Timestamp.now(),
-                        fornecedor: 'Fornecedor Teste',
+                        fornecedor: 'FORNECEDOR DO HISTÓRICO TESTE',
                         prazoEntrega: firebase.firestore.Timestamp.now(),
-                        qtdeComprada: 10,
+                        qtdeComprada: 25,
                         responsavel: 'Sistema Teste',
-                        observacoes: 'Item criado para teste'
+                        observacoes: 'Item criado ESPECIFICAMENTE para testar se o fornecedor do histórico aparece corretamente'
                     }]
                 };
                 
                 const docRef = await this.db.collection('itens').add(itemTeste);
                 console.log('✅ Item de teste criado com ID:', docRef.id);
+                console.log('🔍 Item de teste criado:', itemTeste);
                 
                 // Recarregar dados
                 await this.carregarItensCombinados();
                 
-                return `Item de teste final criado com sucesso! ID: ${docRef.id}`;
+                return `Item TESTE-FORNECEDOR-123 criado com sucesso! ID: ${docRef.id}. Fornecedor deve ser "FORNECEDOR DO HISTÓRICO TESTE"`;
                 
             } catch (error) {
                 console.error('❌ Erro ao criar item de teste:', error);
@@ -205,7 +205,32 @@ class RecebimentoFinalManager {
         window.criarDadosDemonstracaoFinal = async () => {
             console.log('🧪 Criando dados de demonstração para compra final...');
             try {
+                // Data de prazo para amanhã
+                const amanha = new Date();
+                amanha.setDate(amanha.getDate() + 1);
+                const prazoEntregaAmanha = amanha.toISOString().split('T')[0];
+                
                 const itensFinais = [
+                    {
+                        codigo: 'LEONARDO-001',
+                        descricao: 'Material para Leonardo - Teste',
+                        clienteNome: 'Leonardo Cliente',
+                        tipoProjeto: 'Projeto Leonardo',
+                        listaMaterial: 'Material Leonardo',
+                        fornecedor: 'Fornecedor Leonardo Ltda',
+                        prazoEntrega: prazoEntregaAmanha,
+                        qtdePendenteRecebimento: 15,
+                        statusItem: 'Aguardando Recebimento Final',
+                        dataUltimaAtualizacao: firebase.firestore.Timestamp.now(),
+                        historicoCompraFinal: [{
+                            dataCompra: firebase.firestore.Timestamp.now(),
+                            fornecedor: 'Fornecedor Leonardo Ltda',
+                            prazoEntrega: firebase.firestore.Timestamp.fromDate(amanha),
+                            qtdeComprada: 15,
+                            responsavel: 'Sistema',
+                            observacoes: 'Item criado especialmente para teste do Leonardo'
+                        }]
+                    },
                     {
                         codigo: 'F001',
                         descricao: 'Janela 80x60cm',
@@ -263,7 +288,7 @@ class RecebimentoFinalManager {
                 // Recarregar dados
                 await this.carregarItensCombinados();
                 
-                return `Dados de demonstração criados com sucesso! 2 itens de compra final foram adicionados.`;
+                return `Dados de demonstração criados com sucesso! 3 itens de compra final foram adicionados, incluindo um item especial para Leonardo com fornecedor e prazo de entrega!`;
             } catch (error) {
                 console.error('❌ Erro ao criar dados de demonstração:', error);
                 return `Erro ao criar dados: ${error.message}`;
@@ -281,11 +306,17 @@ class RecebimentoFinalManager {
                 
                 snapshot.docs.forEach((doc, index) => {
                     const item = doc.data();
-                    console.log(`${index + 1}. ID: ${doc.id}`, {
-                        codigo: item.codigo,
+                    const ultimaCompra = item.historicoCompraFinal?.length > 0 ? item.historicoCompraFinal[item.historicoCompraFinal.length - 1] : null;
+                    
+                    console.log(`${index + 1}. ID: ${doc.id} - Código: ${item.codigo}`, {
+                        fornecedorItem: item.fornecedor,
+                        fornecedorHistorico: ultimaCompra?.fornecedor,
+                        prazoItem: item.prazoEntrega,
+                        prazoHistorico: ultimaCompra?.prazoEntrega,
                         statusItem: item.statusItem,
                         qtdePendenteRecebimento: item.qtdePendenteRecebimento,
-                        historicoCompraFinal: item.historicoCompraFinal?.length || 0
+                        historicoLength: item.historicoCompraFinal?.length || 0,
+                        historicoCompleto: item.historicoCompraFinal
                     });
                 });
                 
@@ -294,14 +325,119 @@ class RecebimentoFinalManager {
             }
         };
         
+        // 🔧 FUNÇÃO UNIVERSAL: Verificar TODOS os itens com problemas de fornecedor
+        window.analisarDadosReaisFirebase = async () => {
+            console.log('🔍 ANALISANDO DADOS REAIS DO FIREBASE...');
+            console.log('==========================================');
+            
+            try {
+                // 1. Buscar TODOS os itens que têm historicoCompraFinal
+                console.log('\n📊 1. Buscando itens com historicoCompraFinal...');
+                const snapshotHistorico = await this.db.collection('itens')
+                    .where('historicoCompraFinal', '!=', null)
+                    .get();
+                    
+                console.log(`📋 Encontrados ${snapshotHistorico.size} itens com historicoCompraFinal`);
+                
+                let problemasEncontrados = 0;
+                let estruturasTipicas = new Map();
+                
+                snapshotHistorico.docs.forEach((doc, index) => {
+                    const item = doc.data();
+                    const ultimaCompra = item.historicoCompraFinal?.length > 0 ? item.historicoCompraFinal[item.historicoCompraFinal.length - 1] : null;
+                    
+                    // Identificar se tem problema de fornecedor
+                    const temProblema = (!item.fornecedor || item.fornecedor === '') && ultimaCompra?.fornecedor;
+                    
+                    if (temProblema) {
+                        problemasEncontrados++;
+                        console.log(`❌ PROBLEMA ${problemasEncontrados} - Item ${item.codigo} (ID: ${doc.id}):`, {
+                            fornecedorItem: item.fornecedor || 'VAZIO',
+                            fornecedorHistorico: ultimaCompra.fornecedor,
+                            statusItem: item.statusItem,
+                            estruturaItem: Object.keys(item).sort(),
+                            estruturaHistorico: Object.keys(ultimaCompra).sort()
+                        });
+                    }
+                    
+                    // Mapear estruturas típicas
+                    const chaveEstrutura = Object.keys(item).sort().join(',');
+                    const contador = estruturasTipicas.get(chaveEstrutura) || 0;
+                    estruturasTipicas.set(chaveEstrutura, contador + 1);
+                    
+                    // Log detalhado para os primeiros 5 itens
+                    if (index < 5) {
+                        console.log(`📋 Item ${index + 1} - ${item.codigo}:`, {
+                            fornecedorItem: item.fornecedor,
+                            fornecedorHistorico: ultimaCompra?.fornecedor,
+                            temPrazoItem: !!item.prazoEntrega,
+                            temPrazoHistorico: !!ultimaCompra?.prazoEntrega,
+                            statusItem: item.statusItem,
+                            estruturaCompleta: item
+                        });
+                    }
+                });
+                
+                console.log(`\n📊 RESUMO DA ANÁLISE:`);
+                console.log(`- Total de itens analisados: ${snapshotHistorico.size}`);
+                console.log(`- Itens com problemas de fornecedor: ${problemasEncontrados}`);
+                console.log(`- Estruturas de dados diferentes encontradas: ${estruturasTipicas.size}`);
+                
+                // 2. Análise específica dos itens 123 e 555
+                console.log('\n🔍 2. Análise específica dos itens 123 e 555...');
+                const codigos = ['123', '555'];
+                
+                for (const codigo of codigos) {
+                    const snapshot = await this.db.collection('itens')
+                        .where('codigo', '==', codigo)
+                        .get();
+                        
+                    if (snapshot.empty) {
+                        console.log(`❌ Item ${codigo} NÃO ENCONTRADO no Firebase`);
+                        continue;
+                    }
+                    
+                    snapshot.docs.forEach((doc) => {
+                        const item = doc.data();
+                        console.log(`\n📋 ANÁLISE DETALHADA - Item ${codigo}:`);
+                        console.log('JSON COMPLETO:', JSON.stringify(item, null, 2));
+                    });
+                }
+                
+                // 3. Retornar dados para correção
+                return {
+                    totalItens: snapshotHistorico.size,
+                    problemasEncontrados,
+                    estruturasTipicas: Array.from(estruturasTipicas.entries())
+                };
+                
+            } catch (error) {
+                console.error('❌ Erro ao analisar dados reais:', error);
+                return null;
+            }
+        };
+        
         // Disponibilizar o manager no escopo global para facilitar acesso
         window.recebimentoFinalManager = this;
         
         console.log('🐛 Métodos de debug disponíveis:');
-        console.log('- window.debugRecebimentoFinal()');
-        console.log('- window.criarItemTesteFinal()');
-        console.log('- window.criarDadosDemonstracaoFinal()');
-        console.log('- window.listarItensCompraFinal()');
+        console.log('- window.debugRecebimentoFinal() - Debug completo do sistema');
+        console.log('- window.analisarDadosReaisFirebase() - ANÁLISE COMPLETA DOS DADOS REAIS');
+        console.log('- window.criarItemTesteFinal() - Criar item de teste');
+        console.log('- window.criarDadosDemonstracaoFinal() - Criar itens de demonstração');
+        console.log('- window.listarItensCompraFinal() - Listar todos os itens');
+        console.log('');
+        console.log('🔧 CORREÇÃO UNIVERSAL APLICADA:');
+        console.log('- Sistema agora busca fornecedor e prazo em MÚLTIPLOS campos');
+        console.log('- Prioridade: historicoCompraFinal > campos alternativos > fallback');
+        console.log('- Funciona para TODOS os itens, não apenas 123/555');
+        console.log('- Conversão robusta de timestamps do Firebase');
+        console.log('');
+        console.log('📋 PARA ANALISAR O PROBLEMA REAL:');
+        console.log('1. Execute: window.analisarDadosReaisFirebase()');
+        console.log('2. Analise os dados JSON completos dos itens 123/555');
+        console.log('3. Identifique a estrutura real dos dados');
+        console.log('4. Recarregue a página e veja se o problema foi resolvido');
     }
 
     /**
@@ -329,7 +465,8 @@ class RecebimentoFinalManager {
             const itensCompraFinal = await this.carregarItensCompraFinal();
             console.log(`✅ ${itensCompraFinal.length} itens da compra final encontrados`);
 
-            // Combinar os arrays (preservar os itens de compra inicial)
+            // Combinar os arrays - permitir que o mesmo item apareça como inicial E final
+            // Isso é correto pois um item pode ter compra inicial e depois compra final adicional
             const totalAntes = this.recebimentoOriginal.itensPendentes.length;
             this.recebimentoOriginal.itensPendentes = [...this.recebimentoOriginal.itensPendentes, ...itensCompraFinal];
             const totalDepois = this.recebimentoOriginal.itensPendentes.length;
@@ -368,9 +505,9 @@ class RecebimentoFinalManager {
         try {
             console.log('🔄 Carregando itens da compra final...');
             
-            // 🔧 ESTRATÉGIA MÚLTIPLA DE BUSCA - buscar por diferentes campos
+            // 🔧 BUSCA SIMPLES: Buscar por historicoCompraFinal e filtrar depois
+            // Evita problema de índice composto no Firebase
             
-            // Primeira tentativa: itens com historicoCompraFinal
             let snapshot = await this.db.collection('itens')
                 .where('historicoCompraFinal', '!=', null)
                 .limit(1000)
@@ -389,33 +526,39 @@ class RecebimentoFinalManager {
                     statusItem: item.statusItem
                 });
 
+                // 🔧 FILTRO: Só aceitar itens com status "Aguardando Recebimento Final"
+                if (item.statusItem !== 'Aguardando Recebimento Final') {
+                    console.log(`⏭️ Item ${item.codigo} - Ignorado (status: ${item.statusItem})`);
+                    continue;
+                }
+
                 // Verificar se tem histórico de compra final
                 if (Array.isArray(item.historicoCompraFinal) && item.historicoCompraFinal.length > 0) {
-                    // Calcular quantidade total comprada e quantidade já recebida
-                    let qtdeTotalComprada = 0;
-                    let qtdeRecebida = 0;
+                    // 🔧 CORREÇÃO: Usar apenas a quantidade da compra final mais recente
+                    // Não somar todo o histórico, apenas a última compra final
+                    const ultimaCompraFinal = item.historicoCompraFinal[item.historicoCompraFinal.length - 1];
                     
-                    // Somar todas as quantidades compradas no histórico
-                    item.historicoCompraFinal.forEach(compra => {
-                        if (compra.qtdeComprada !== undefined && compra.qtdeComprada !== null) {
-                            qtdeTotalComprada += compra.qtdeComprada;
-                        } else if (compra.qtde !== undefined && compra.qtde !== null) {
-                            qtdeTotalComprada += compra.qtde;
-                        }
-                    });
+                    // Obter quantidade da compra final específica
+                    let qtdeCompraFinal = 0;
+                    if (ultimaCompraFinal.qtdeComprada !== undefined && ultimaCompraFinal.qtdeComprada !== null) {
+                        qtdeCompraFinal = ultimaCompraFinal.qtdeComprada;
+                    } else if (ultimaCompraFinal.qtde !== undefined && ultimaCompraFinal.qtde !== null) {
+                        qtdeCompraFinal = ultimaCompraFinal.qtde;
+                    }
                     
-                    // Calcular quantidade já recebida
+                    // Calcular apenas o que já foi recebido da compra FINAL
+                    let qtdeRecebidaFinal = 0;
                     if (item.historicoRecebimentos) {
                         item.historicoRecebimentos.forEach(rec => {
                             if (rec.tipoCompra === 'Final') {
-                                qtdeRecebida += rec.qtde || rec.qtdeRecebida || 0;
+                                qtdeRecebidaFinal += rec.qtde || rec.qtdeRecebida || 0;
                             }
                         });
                     }
                     
-                    // Quantidade pendente = total comprada - já recebida
-                    const qtdePendente = qtdeTotalComprada - qtdeRecebida;
-                    console.log(`📦 Item ${item.codigo} - Qtde pendente: ${qtdePendente} (comprada: ${qtdeTotalComprada}, recebida: ${qtdeRecebida})`);
+                    // Quantidade pendente = apenas da compra final - já recebido da final
+                    const qtdePendente = qtdeCompraFinal - qtdeRecebidaFinal;
+                    console.log(`📦 Item ${item.codigo} - Qtde pendente: ${qtdePendente} (comprada final: ${qtdeCompraFinal}, recebida final: ${qtdeRecebidaFinal})`);
 
                     // Se já foi totalmente recebido, ignorar item
                     if (qtdePendente <= 0) {
@@ -423,33 +566,86 @@ class RecebimentoFinalManager {
                         continue;
                     }
 
+                    console.log(`📦 Item ${item.codigo} - CORREÇÃO APLICADA:`, {
+                        qtdeCompraFinal,
+                        qtdeRecebidaFinal,
+                        qtdePendente,
+                        ultimaCompraFinal
+                    });
+
                     if (qtdePendente > 0) {
                         // Buscar dados do pedido para obter cliente
                         let clienteNome = item.clienteNome || item.cliente || 'N/A';
                         let tipoProjeto = item.tipoProjeto || item.projetoNome || 'N/A';
                         
-                        // Buscar dados do histórico de compra para preencher campos em falta
-                        if (item.historicoCompraFinal.length > 0) {
-                            const ultimaCompra = item.historicoCompraFinal[item.historicoCompraFinal.length - 1];
+                        // 🔧 CORREÇÃO DEFINITIVA: Extrair fornecedor e prazo de historicoCompraFinal baseado nos dados REAIS
+                        let fornecedorFinal = 'Fornecedor Não Informado';
+                        let prazoEntregaFinal = new Date().toISOString().split('T')[0];
+                        
+                        // ESTRATÉGIA BASEADA NOS DADOS REAIS DO FIREBASE:
+                        // O print mostrou que o fornecedor está em historicoCompraFinal[1].fornecedor = "REHAU"
+                        // Vamos buscar em TODAS as posições do array, priorizando as mais recentes
+                        
+                        if (item.historicoCompraFinal && Array.isArray(item.historicoCompraFinal) && item.historicoCompraFinal.length > 0) {
+                            console.log(`🔍 ANÁLISE DETALHADA ${item.codigo} - historicoCompraFinal:`, item.historicoCompraFinal);
                             
-                            // Se não tem prazo de entrega, usar da compra final
-                            if (!item.prazoEntrega && ultimaCompra.prazoEntrega) {
-                                try {
-                                    // Verificar se prazoEntrega é um timestamp do Firebase ou uma string de data
-                                    const prazoDate = typeof ultimaCompra.prazoEntrega.toDate === 'function' 
-                                        ? ultimaCompra.prazoEntrega.toDate() 
-                                        : new Date(ultimaCompra.prazoEntrega);
-                                    item.prazoEntrega = prazoDate.toISOString().split('T')[0];
-                                } catch (e) {
-                                    console.warn('⚠️ Erro ao converter prazoEntrega:', e);
+                            // Buscar de trás para frente (mais recente primeiro)
+                            for (let i = item.historicoCompraFinal.length - 1; i >= 0; i--) {
+                                const compra = item.historicoCompraFinal[i];
+                                
+                                console.log(`   Posição [${i}]:`, {
+                                    temFornecedor: !!compra.fornecedor,
+                                    fornecedor: compra.fornecedor,
+                                    temPrazo: !!compra.prazoEntrega,
+                                    prazoEntrega: compra.prazoEntrega
+                                });
+                                
+                                // Se encontrou fornecedor válido, usar
+                                if (compra.fornecedor && compra.fornecedor.trim() !== '' && fornecedorFinal === 'Fornecedor Não Informado') {
+                                    fornecedorFinal = compra.fornecedor.trim();
+                                    console.log(`   ✅ Fornecedor encontrado na posição [${i}]: ${fornecedorFinal}`);
+                                }
+                                
+                                // Se encontrou prazo válido, usar
+                                if (compra.prazoEntrega && prazoEntregaFinal === new Date().toISOString().split('T')[0]) {
+                                    try {
+                                        if (typeof compra.prazoEntrega.toDate === 'function') {
+                                            // É um Timestamp do Firebase
+                                            prazoEntregaFinal = compra.prazoEntrega.toDate().toISOString().split('T')[0];
+                                        } else if (typeof compra.prazoEntrega === 'string') {
+                                            // É uma string de data
+                                            prazoEntregaFinal = compra.prazoEntrega.split('T')[0];
+                                        } else if (compra.prazoEntrega instanceof Date) {
+                                            // É um objeto Date
+                                            prazoEntregaFinal = compra.prazoEntrega.toISOString().split('T')[0];
+                                        }
+                                        console.log(`   ✅ Prazo encontrado na posição [${i}]: ${prazoEntregaFinal}`);
+                                    } catch (e) {
+                                        console.warn(`   ⚠️ Erro ao converter prazo na posição [${i}]:`, e);
+                                    }
+                                }
+                                
+                                // Se já encontrou ambos, pode parar
+                                if (fornecedorFinal !== 'Fornecedor Não Informado' && prazoEntregaFinal !== new Date().toISOString().split('T')[0]) {
+                                    break;
                                 }
                             }
-                            
-                            // Se não tem fornecedor, usar da compra final
-                            if (!item.fornecedor && ultimaCompra.fornecedor) {
-                                item.fornecedor = ultimaCompra.fornecedor;
-                            }
                         }
+                        
+                        // FALLBACK: Se não encontrou no histórico, tentar no item raiz
+                        if (fornecedorFinal === 'Fornecedor Não Informado') {
+                            fornecedorFinal = item.fornecedor || item.nomefornecedor || item.fornecedorNome || item.supplier || 'Fornecedor Não Informado';
+                            console.log(`   🔄 Fallback fornecedor: ${fornecedorFinal}`);
+                        }
+                        
+                        if (prazoEntregaFinal === new Date().toISOString().split('T')[0]) {
+                            prazoEntregaFinal = item.prazoEntrega || item.dataEntrega || item.deliveryDate || new Date().toISOString().split('T')[0];
+                            console.log(`   🔄 Fallback prazo: ${prazoEntregaFinal}`);
+                        }
+                        
+                        // Aplicar os valores finais
+                        item.fornecedor = fornecedorFinal;
+                        item.prazoEntrega = prazoEntregaFinal;
 
                         if (item.pedidoId && clienteNome === 'N/A') {
                             try {
@@ -464,6 +660,13 @@ class RecebimentoFinalManager {
                             }
                         }
 
+                        // 🔧 LOG FINAL: Verificar resultado da correção universal
+                        console.log(`✅ ITEM PROCESSADO - ${item.codigo}:`, {
+                            fornecedorFinal: item.fornecedor,
+                            prazoEntregaFinal: item.prazoEntrega,
+                            foiCorrigido: fornecedorFinal !== (item.fornecedor || '') || prazoEntregaFinal !== (item.prazoEntrega || '')
+                        });
+
                         // Adicionar marcador de tipo
                         const itemEnriquecido = {
                             id: doc.id,
@@ -471,7 +674,9 @@ class RecebimentoFinalManager {
                             qtdePendenteRecebimento: qtdePendente,
                             clienteNome,
                             tipoProjeto,
-                            tipoCompra: 'Final' // Marcar como compra final
+                            tipoCompra: 'Final', // Marcar como compra final
+                            fornecedor: item.fornecedor, // 🔧 Garantir que está presente
+                            prazoEntrega: item.prazoEntrega // 🔧 Garantir que está presente
                         };
 
                         itensCompraFinal.push(itemEnriquecido);
@@ -484,11 +689,11 @@ class RecebimentoFinalManager {
                 }
             }
             
-            // 🔧 SE NÃO ENCONTROU NADA, TENTAR BUSCA ALTERNATIVA
+            // 🔧 SE NÃO ENCONTROU NADA, TENTAR BUSCA MAIS AMPLA
             if (itensCompraFinal.length === 0) {
-                console.log('🔄 Tentando busca alternativa por statusItem...');
+                console.log('🔄 Tentando busca mais ampla por historicoCompraFinal...');
                 snapshot = await this.db.collection('itens')
-                    .where('statusItem', '==', 'Aguardando Recebimento Final')
+                    .where('historicoCompraFinal', '!=', null)
                     .limit(1000)
                     .get();
                     
@@ -497,31 +702,116 @@ class RecebimentoFinalManager {
                 for (const doc of snapshot.docs) {
                     const item = doc.data();
                     
-                    let qtdePendente = item.qtdePendenteRecebimento || 0;
-                    if (qtdePendente === 0 && item.historicoCompraFinal && item.historicoCompraFinal.length > 0) {
-                        const ultimaCompra = item.historicoCompraFinal[item.historicoCompraFinal.length - 1];
-                        // Verificar se realmente existe qtdeComprada ou qtde antes de atribuir
-                        if (ultimaCompra.qtdeComprada !== undefined && ultimaCompra.qtdeComprada !== null) {
-                            qtdePendente = ultimaCompra.qtdeComprada;
-                        } else if (ultimaCompra.qtde !== undefined && ultimaCompra.qtde !== null) {
-                            qtdePendente = ultimaCompra.qtde;
-                        } else {
-                            qtdePendente = 0;
+                    // 🔧 CORREÇÃO: Aplicar a mesma lógica para busca alternativa
+                    let qtdePendente = 0;
+                    if (item.historicoCompraFinal && item.historicoCompraFinal.length > 0) {
+                        const ultimaCompraFinal = item.historicoCompraFinal[item.historicoCompraFinal.length - 1];
+                        
+                        // Obter quantidade da compra final específica
+                        let qtdeCompraFinal = 0;
+                        if (ultimaCompraFinal.qtdeComprada !== undefined && ultimaCompraFinal.qtdeComprada !== null) {
+                            qtdeCompraFinal = ultimaCompraFinal.qtdeComprada;
+                        } else if (ultimaCompraFinal.qtde !== undefined && ultimaCompraFinal.qtde !== null) {
+                            qtdeCompraFinal = ultimaCompraFinal.qtde;
                         }
+                        
+                        // Calcular apenas o que já foi recebido da compra FINAL
+                        let qtdeRecebidaFinal = 0;
+                        if (item.historicoRecebimentos) {
+                            item.historicoRecebimentos.forEach(rec => {
+                                if (rec.tipoCompra === 'Final') {
+                                    qtdeRecebidaFinal += rec.qtde || rec.qtdeRecebida || 0;
+                                }
+                            });
+                        }
+                        
+                        // Quantidade pendente = apenas da compra final - já recebido da final
+                        qtdePendente = qtdeCompraFinal - qtdeRecebidaFinal;
+                        
+                        console.log(`📦 Busca Alt - Item ${item.codigo}:`, {
+                            qtdeCompraFinal,
+                            qtdeRecebidaFinal,
+                            qtdePendente
+                        });
                     }
                     
                     if (qtdePendente > 0) {
+                        // 🔧 APLICAR A MESMA CORREÇÃO DEFINITIVA PARA BUSCA ALTERNATIVA
+                        let fornecedorFinal = 'Fornecedor Não Informado';
+                        let prazoEntregaFinal = new Date().toISOString().split('T')[0];
+                        
+                        // Buscar no histórico de compra final (mesma lógica)
+                        if (item.historicoCompraFinal && Array.isArray(item.historicoCompraFinal) && item.historicoCompraFinal.length > 0) {
+                            console.log(`🔍 BUSCA ALT ${item.codigo} - historicoCompraFinal:`, item.historicoCompraFinal);
+                            
+                            // Buscar de trás para frente (mais recente primeiro)
+                            for (let i = item.historicoCompraFinal.length - 1; i >= 0; i--) {
+                                const compra = item.historicoCompraFinal[i];
+                                
+                                console.log(`   Alt Posição [${i}]:`, {
+                                    temFornecedor: !!compra.fornecedor,
+                                    fornecedor: compra.fornecedor,
+                                    temPrazo: !!compra.prazoEntrega,
+                                    prazoEntrega: compra.prazoEntrega
+                                });
+                                
+                                // Se encontrou fornecedor válido, usar
+                                if (compra.fornecedor && compra.fornecedor.trim() !== '' && fornecedorFinal === 'Fornecedor Não Informado') {
+                                    fornecedorFinal = compra.fornecedor.trim();
+                                    console.log(`   ✅ Alt Fornecedor encontrado na posição [${i}]: ${fornecedorFinal}`);
+                                }
+                                
+                                // Se encontrou prazo válido, usar
+                                if (compra.prazoEntrega && prazoEntregaFinal === new Date().toISOString().split('T')[0]) {
+                                    try {
+                                        if (typeof compra.prazoEntrega.toDate === 'function') {
+                                            prazoEntregaFinal = compra.prazoEntrega.toDate().toISOString().split('T')[0];
+                                        } else if (typeof compra.prazoEntrega === 'string') {
+                                            prazoEntregaFinal = compra.prazoEntrega.split('T')[0];
+                                        } else if (compra.prazoEntrega instanceof Date) {
+                                            prazoEntregaFinal = compra.prazoEntrega.toISOString().split('T')[0];
+                                        }
+                                        console.log(`   ✅ Alt Prazo encontrado na posição [${i}]: ${prazoEntregaFinal}`);
+                                    } catch (e) {
+                                        console.warn(`   ⚠️ Alt Erro ao converter prazo na posição [${i}]:`, e);
+                                    }
+                                }
+                                
+                                // Se já encontrou ambos, pode parar
+                                if (fornecedorFinal !== 'Fornecedor Não Informado' && prazoEntregaFinal !== new Date().toISOString().split('T')[0]) {
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // Fallbacks universais
+                        if (fornecedorFinal === 'Fornecedor Não Informado') {
+                            fornecedorFinal = item.fornecedor || item.nomefornecedor || item.fornecedorNome || item.supplier || 'Fornecedor Não Informado';
+                            console.log(`   🔄 Alt Fallback fornecedor: ${fornecedorFinal}`);
+                        }
+                        
+                        if (prazoEntregaFinal === new Date().toISOString().split('T')[0]) {
+                            prazoEntregaFinal = item.prazoEntrega || item.dataEntrega || item.deliveryDate || new Date().toISOString().split('T')[0];
+                            console.log(`   🔄 Alt Fallback prazo: ${prazoEntregaFinal}`);
+                        }
+                        
+                        // Aplicar valores corrigidos
+                        item.fornecedor = fornecedorFinal;
+                        item.prazoEntrega = prazoEntregaFinal;
+                        
                         const itemEnriquecido = {
                             id: doc.id,
                             ...item,
                             qtdePendenteRecebimento: qtdePendente,
                             clienteNome: item.clienteNome || item.cliente || 'N/A',
                             tipoProjeto: item.tipoProjeto || item.projetoNome || 'N/A',
-                            tipoCompra: 'Final'
+                            tipoCompra: 'Final',
+                            fornecedor: item.fornecedor, // 🔧 Garantir que está presente
+                            prazoEntrega: item.prazoEntrega // 🔧 Garantir que está presente
                         };
                         
                         itensCompraFinal.push(itemEnriquecido);
-                        console.log(`✅ Item ${item.codigo} adicionado via busca alternativa`);
+                        console.log(`✅ Item ${item.codigo} adicionado via busca alternativa - fornecedor: ${item.fornecedor}, prazo: ${item.prazoEntrega}`);
                     }
                 }
             }

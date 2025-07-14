@@ -124,15 +124,15 @@ class SistemaSeparacaoProducao {
         try {
             this.showLoading('Carregando clientes...');
             
-            // Buscar itens que têm qtdNecessariaFinal > 0
+            // Buscar itens que têm QtdItemNecFinal > 0 (campo correto salvo pelo tratamento-empenho)
             const itensSnapshot = await this.db.collection('itens')
-                .where('qtdNecessariaFinal', '>', 0)
+                .where('QtdItemNecFinal', '>', 0)
                 .get();
             
-            console.log(`📊 ${itensSnapshot.size} itens com qtdNecessariaFinal > 0 encontrados`);
+            console.log(`📊 ${itensSnapshot.size} itens com QtdItemNecFinal > 0 encontrados`);
             
             if (itensSnapshot.empty) {
-                this.showToast('Nenhum item encontrado para separação', 'warning');
+                this.showToast('Nenhum item encontrado para separação. Verifique se a análise final foi realizada.', 'warning');
                 this.hideLoading();
                 return;
             }
@@ -241,7 +241,7 @@ class SistemaSeparacaoProducao {
                         // Filtrar no lado do cliente para evitar índice composto
                         const temItensParaSeparacao = itensSnapshot.docs.some(doc => {
                             const item = doc.data();
-                            return (item.qtdNecessariaFinal || 0) > 0;
+                            return (item.QtdItemNecFinal || 0) > 0;
                         });
                         
                         if (temItensParaSeparacao && pedido.tipoProjeto) {
@@ -321,7 +321,7 @@ class SistemaSeparacaoProducao {
                     // Filtrar no lado do cliente para evitar índice composto
                     itensSnapshot.forEach(doc => {
                         const item = doc.data();
-                        if ((item.qtdNecessariaFinal || 0) > 0 && item.listaMaterial) {
+                        if ((item.QtdItemNecFinal || 0) > 0 && item.listaMaterial) {
                             listas.add(item.listaMaterial);
                         }
                     });
@@ -410,32 +410,82 @@ class SistemaSeparacaoProducao {
                     for (const doc of itensSnapshot.docs) {
                         const item = { id: doc.id, ...doc.data() };
                         
-                        // Filtrar apenas itens com qtdNecessariaFinal > 0
-                        if (!item.qtdNecessariaFinal || item.qtdNecessariaFinal <= 0) {
+                        // Filtrar apenas itens com QtdItemNecFinal > 0 (campo correto)
+                        if (!item.QtdItemNecFinal || item.QtdItemNecFinal <= 0) {
                             continue;
                         }
                         
-                        // Verificar se o item com compraFinal > 0 já foi recebido
-                        if (item.compraFinal > 0) {
-                            // Verificar se a compra final já foi recebida (historicoRecebimento tem a quantia)
-                            const totalRecebidoCompraFinal = this.calcularTotalRecebidoCompraFinal(item);
-                            
-                            // Se a compra final já foi totalmente recebida, pular este item
-                            if (totalRecebidoCompraFinal >= item.compraFinal) {
-                                console.log(`⏭️ Item ${item.codigo} - Compra final já foi recebida (${totalRecebidoCompraFinal}/${item.compraFinal})`);
-                                continue;
-                            }
+                        // Verificar se já foi separado para produção
+                        if (item.statusItem === 'Separado para Produção' || item.qtdProducao > 0) {
+                            console.log(`⏭️ Item ${item.codigo} - Já foi separado para produção`);
+                            continue;
                         }
                         
-                        // Adicionar item à lista
+                        // CORREÇÃO: Incluir itens que foram recebidos e estão prontos para separação
+                        // Não excluir itens recebidos! Eles devem aparecer para separação.
+                        
+                        // Adicionar item à lista - incluindo itens empenhados E itens recebidos
                         this.itensParaSeparacao.push(item);
+                        
+                        console.log(`✅ Item ${item.codigo} - Incluído para separação (QtdItemNecFinal: ${item.QtdItemNecFinal})`);
                     }
                 } catch (err) {
                     console.warn(`⚠️ Erro ao buscar itens do pedido ${pedidoId}:`, err);
                 }
             }
             
-            console.log(`📊 ${this.itensParaSeparacao.length} itens encontrados para separação`);
+            // Busca adicional: encontrar itens criados pelo botão "Criar e Comprar" na análise final
+            // Estes itens não têm pedidoId, mas têm criadoPorAnalise=true
+            try {
+                console.log('🔍 Buscando itens criados pela análise final...');
+                
+                const itensAnaliseSnapshot = await this.db.collection('itens')
+                    .where('criadoPorAnalise', '==', true)
+                    .where('listaMaterial', '==', lista)
+                    .get();
+                
+                let itensIncluidos = 0;
+                
+                // Filtrar no lado do cliente
+                for (const doc of itensAnaliseSnapshot.docs) {
+                    const item = { id: doc.id, ...doc.data() };
+                    
+                    // Verificar se corresponde aos filtros de cliente e projeto
+                    if (item.cliente !== cliente || item.tipoProjeto !== projeto) {
+                        continue;
+                    }
+                    
+                    // Filtrar apenas itens com QtdItemNecFinal > 0
+                    if (!item.QtdItemNecFinal || item.QtdItemNecFinal <= 0) {
+                        continue;
+                    }
+                    
+                    // Verificar se já tem qtdProducao definida (já foi realmente separado)
+                    if (item.qtdProducao > 0) {
+                        console.log(`⏭️ Item ${item.codigo} (criado por análise) - Já foi separado para produção`);
+                        continue;
+                    }
+                    
+                    // Verificar se o item já está na lista (para evitar duplicatas)
+                    const itemJaExiste = this.itensParaSeparacao.some(existente => existente.id === item.id);
+                    if (itemJaExiste) {
+                        continue;
+                    }
+                    
+                    // Adicionar item à lista
+                    this.itensParaSeparacao.push(item);
+                    itensIncluidos++;
+                    
+                    console.log(`✅ Item ${item.codigo} (criado por análise) - Incluído para separação (QtdItemNecFinal: ${item.QtdItemNecFinal})`);
+                }
+                
+                console.log(`📊 ${itensIncluidos} itens criados pela análise incluídos para separação`);
+                
+            } catch (error) {
+                console.error('❌ Erro ao buscar itens criados pela análise:', error);
+            }
+            
+            console.log(`📊 Total: ${this.itensParaSeparacao.length} itens encontrados para separação`);
             
             // Mostrar tabela de itens
             this.renderizarTabelaItens();
@@ -462,6 +512,20 @@ class SistemaSeparacaoProducao {
             .reduce((total, rec) => {
                 return total + (rec.qtde || rec.qtdeRecebida || 0);
             }, 0);
+    }
+    
+    /**
+     * Calcular total recebido geral (todos os tipos de recebimento)
+     */
+    calcularTotalRecebidoGeral(item) {
+        if (!item.historicoRecebimentos || !Array.isArray(item.historicoRecebimentos)) {
+            return 0;
+        }
+        
+        // Somar todos os recebimentos
+        return item.historicoRecebimentos.reduce((total, rec) => {
+            return total + (rec.qtde || rec.qtdeRecebida || 0);
+        }, 0);
     }
     
     /**
@@ -499,17 +563,25 @@ class SistemaSeparacaoProducao {
         let html = '';
         
         this.itensParaSeparacao.forEach(item => {
-            // Calcular valores para as colunas
-            const qtdNecessaria = item.qtdNecessariaFinal || 0;
+            // Calcular valores para as colunas (usando QtdItemNecFinal - campo correto)
+            const qtdNecessaria = item.QtdItemNecFinal || 0;
             const compraFinal = item.compraFinal || 0;
-            const empenhado = qtdNecessaria - compraFinal;
+            const empenhado = Math.max(0, qtdNecessaria - compraFinal); // Empenhado não pode ser negativo
             const devolucaoEstoque = this.calcularDevolucaoEstoque(item);
+            
+            // Verificar se o item foi recebido (tem histórico de recebimentos)
+            const totalRecebido = this.calcularTotalRecebidoGeral(item);
+            const foiRecebido = totalRecebido > 0;
+            
+            // Status visual para mostrar se foi recebido
+            const statusRecepcao = foiRecebido ? '✅ Recebido' : '📦 Pendente';
+            const statusClass = foiRecebido ? 'status-recebido' : 'status-pendente';
             
             const separacaoDisabled = qtdNecessaria === 0 ? 'disabled' : '';
             const devolucaoDisabled = devolucaoEstoque === 0 ? 'disabled' : '';
             
             html += `
-                <tr data-id="${item.id}">
+                <tr data-id="${item.id}" class="${statusClass}">
                     <td class="checkbox-cell">
                         <input type="checkbox" class="item-checkbox" value="${item.id}">
                     </td>
@@ -519,6 +591,7 @@ class SistemaSeparacaoProducao {
                     <td>${empenhado}</td>
                     <td>${compraFinal}</td>
                     <td>${devolucaoEstoque}</td>
+                    <td class="status-cell">${statusRecepcao}</td>
                     <td class="actions-cell">
                         <button class="btn-action btn-primary btn-sm btn-separar" data-id="${item.id}" ${separacaoDisabled}>
                             <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -643,8 +716,8 @@ class SistemaSeparacaoProducao {
             this.itensParaSeparacao.find(item => item.id === id)
         ).filter(Boolean);
         
-        // Verificar se há itens com qtdNecessariaFinal > 0
-        const temItensSeparar = itensSelecionados.some(item => (item.qtdNecessariaFinal || 0) > 0);
+        // Verificar se há itens com QtdItemNecFinal > 0 (campo correto)
+        const temItensSeparar = itensSelecionados.some(item => (item.QtdItemNecFinal || 0) > 0);
         
         // Verificar se há itens com devolucaoEstoque
         const temItensDevolver = itensSelecionados.some(item => 
@@ -687,10 +760,10 @@ class SistemaSeparacaoProducao {
      * Abrir modal de separação
      */
     abrirModalSeparacao() {
-        // Obter itens selecionados
+        // Obter itens selecionados (usando QtdItemNecFinal - campo correto)
         const itensSelecionados = Array.from(this.itensSelecionados).map(id => 
             this.itensParaSeparacao.find(item => item.id === id)
-        ).filter(item => item && (item.qtdNecessariaFinal || 0) > 0);
+        ).filter(item => item && (item.QtdItemNecFinal || 0) > 0);
         
         if (itensSelecionados.length === 0) {
             this.showToast('Nenhum item selecionado para separação', 'warning');
@@ -708,7 +781,7 @@ class SistemaSeparacaoProducao {
                 <div class="modal-item">
                     <span class="modal-item-code">${item.codigo || '-'}</span>
                     <span class="modal-item-desc">${item.descricao || item.item || item.produto || '-'}</span>
-                    <span class="modal-item-qty">Qtd: ${item.qtdNecessariaFinal || 0}</span>
+                    <span class="modal-item-qty">Qtd: ${item.QtdItemNecFinal || 0}</span>
                 </div>
             `;
         });
@@ -769,10 +842,10 @@ class SistemaSeparacaoProducao {
         try {
             this.showLoading('Separando itens para produção...');
             
-            // Obter itens selecionados
+            // Obter itens selecionados (usando QtdItemNecFinal - campo correto)
             const itensSelecionados = Array.from(this.itensSelecionados).map(id => 
                 this.itensParaSeparacao.find(item => item.id === id)
-            ).filter(item => item && (item.qtdNecessariaFinal || 0) > 0);
+            ).filter(item => item && (item.QtdItemNecFinal || 0) > 0);
             
             if (itensSelecionados.length === 0) {
                 this.showToast('Nenhum item selecionado para separação', 'warning');
@@ -788,9 +861,9 @@ class SistemaSeparacaoProducao {
             itensSelecionados.forEach(item => {
                 const itemRef = this.db.collection('itens').doc(item.id);
                 
-                // Registrar separação para produção
+                // Registrar separação para produção (usando QtdItemNecFinal - campo correto)
                 batch.update(itemRef, {
-                    qtdProducao: item.qtdNecessariaFinal,
+                    qtdProducao: item.QtdItemNecFinal,
                     statusItem: 'Separado para Produção',
                     dataSeparacaoProducao: timestamp,
                     responsavelSeparacao: 'Sistema',
@@ -898,8 +971,8 @@ class SistemaSeparacaoProducao {
         const idsParaRemover = [];
         
         itens.forEach(item => {
-            // Se o item tem qtdNecessariaFinal = 0 ou já foi separado (tem qtdProducao), remover da lista
-            if ((item.qtdNecessariaFinal || 0) === 0 || item.qtdProducao) {
+            // Se o item tem QtdItemNecFinal = 0 ou já foi separado (tem qtdProducao), remover da lista
+            if ((item.QtdItemNecFinal || 0) === 0 || item.qtdProducao) {
                 idsParaRemover.push(item.id);
             }
         });

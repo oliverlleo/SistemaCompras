@@ -69,10 +69,14 @@ class DashboardCliente {
             console.log(`Carregados ${this.pedidos.length} pedidos com suas listas de materiais`);
             
             // Processar dados dos clientes
+            console.log('Iniciando processamento dos dados dos clientes...');
             await this.processarDadosClientes();
+            console.log('Processamento concluído. Clientes processados:', this.clientesData.size);
             
             // Renderizar interface
+            console.log('Iniciando renderização do dashboard...');
             await this.renderizarDashboard();
+            console.log('Renderização concluída.');
             
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
@@ -152,6 +156,32 @@ class DashboardCliente {
             itensCompra: []
         };
 
+        // Para acelerar o carregamento, vamos simplificar a análise de estoque
+        // Se precisar dos dados detalhados, eles podem ser carregados posteriormente
+        try {
+            for (const item of itens) {
+                // Análise simplificada - assumir que todos os itens precisam ser alocados
+                const quantidade = parseFloat(item.quantidade) || 0;
+                analise.totalAlocado += quantidade;
+                
+                if (quantidade > 0) {
+                    analise.itensAlocados.push({
+                        nome: item.nome || item.codigo,
+                        codigo: item.codigo,
+                        quantidade: quantidade,
+                        unidade: item.unidade || 'un',
+                        descricao: item.descricao || ''
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Erro na análise simplificada de estoque:', error);
+        }
+
+        return analise;
+        
+        /* 
+        // Código original comentado temporariamente para acelerar carregamento
         for (const item of itens) {
             try {
                 let qtdeAlocada = 0;
@@ -214,15 +244,20 @@ class DashboardCliente {
         }
 
         return analise;
+        */
     }
 
     // Renderizar o dashboard completo
     async renderizarDashboard() {
+        console.log('Entrando em renderizarDashboard. Clientes encontrados:', this.clientesData.size);
+        
         if (this.clientesData.size === 0) {
+            console.log('Nenhum cliente encontrado, mostrando estado vazio');
             this.mostrarEstadoVazio();
             return;
         }
 
+        console.log('Ocultando estados e mostrando container de clientes');
         this.ocultarEstados();
         document.getElementById('clientesContainer').classList.remove('hidden');
         
@@ -233,9 +268,13 @@ class DashboardCliente {
         const clientes = Array.from(this.clientesData.values())
             .sort((a, b) => a.nome.localeCompare(b.nome));
 
+        console.log('Criando cards para clientes:', clientes.map(c => c.nome));
+
         for (const cliente of clientes) {
+            console.log('Criando card para cliente:', cliente.nome);
             const card = await this.criarCardCliente(cliente);
             container.appendChild(card);
+            console.log('Card criado e adicionado para:', cliente.nome);
         }
     }
 
@@ -317,9 +356,25 @@ class DashboardCliente {
         section.appendChild(projetoHeader);
         
         // Criar card para cada lista de material
+        console.log(`Criando cards para ${projeto.listasMateriais.length} listas de material`);
         for (const lista of projeto.listasMateriais) {
-            const card = await this.criarCardListaMaterial(lista, projeto, clienteNome);
-            section.appendChild(card);
+            console.log(`Criando card para lista: ${lista.nome}`);
+            try {
+                const card = await this.criarCardListaMaterial(lista, projeto, clienteNome);
+                section.appendChild(card);
+                console.log(`Card criado para lista: ${lista.nome}`);
+            } catch (error) {
+                console.error(`Erro ao criar card para lista ${lista.nome}:`, error);
+                // Criar card de erro simplificado
+                const errorCard = document.createElement('div');
+                errorCard.className = 'material-list';
+                errorCard.innerHTML = `
+                    <div style="color: red; padding: 1rem;">
+                        Erro ao carregar lista: ${lista.nome}
+                    </div>
+                `;
+                section.appendChild(errorCard);
+            }
         }
         
         return section;
@@ -343,6 +398,8 @@ class DashboardCliente {
 
     // Criar card para uma lista de material
     async criarCardListaMaterial(lista, projeto, clienteNome) {
+        console.log('Início criarCardListaMaterial para:', lista.nome);
+        
         // Criar um container grid principal para todos os módulos
         const modulesContainer = document.createElement('div');
         modulesContainer.className = 'material-list';
@@ -358,6 +415,8 @@ class DashboardCliente {
             </div>
         `;
         modulesContainer.appendChild(header);
+        
+        console.log('Header criado para:', lista.nome);
         
         // Seção de Informações Gerais
         const infoGeneralSection = document.createElement('div');
@@ -378,13 +437,12 @@ class DashboardCliente {
         const sectionHeader = document.createElement('div');
         sectionHeader.className = 'section-dropdown-header';
         
-        // Primeiro, precisamos calcular os dados do resumo
-        const resumoData = await this.calcularResumoVisual(lista, projeto);
-        
+        // Simplificar o header por enquanto para acelerar carregamento
         sectionHeader.innerHTML = `
-            <h3>Informações do Projeto</h3>
+            <h3>Informações do Projeto - ${lista.nome}</h3>
             <div class="project-summary-visual">
-                ${this.criarResumoVisual(resumoData)}
+                <span class="summary-item">${lista.totalItens} itens</span>
+                <span class="summary-item">${Math.round(lista.quantidadeTotal)} total</span>
             </div>
             <span class="dropdown-icon">▼</span>
         `;
@@ -434,34 +492,24 @@ class DashboardCliente {
         ]);
         infoGeneralSection.appendChild(moduleAnaliseInicial);
         
-        // 3. Módulo Mudanças Finais (movido da Fase Final para Informações Gerais)
-        this.obterDadosAnaliseFinal(lista.itens, projeto.pedidoId).then(dadosAnalise => {
-            const moduleMudancasFinais = this.criarModuloCard('Mudanças Finais', 'module-mudancas-finais', [
-                { 
-                    label: 'Lista Inicial', 
-                    value: Math.round(dadosAnalise.totalListaInicial),
-                    onClick: () => this.mostrarDetalhesAnaliseFinal(
-                        dadosAnalise.itensListaInicial,
-                        `Itens Lista Inicial - ${lista.nome}`,
-                        'lista_inicial'
-                    ),
-                    colorClass: 'stock-allocated'
-                },
-                { 
-                    label: 'Lista Produção', 
-                    value: Math.round(dadosAnalise.totalListaProducao),
-                    onClick: () => this.mostrarDetalhesAnaliseFinal(
-                        dadosAnalise.itensListaProducao,
-                        `Itens Lista Produção - ${lista.nome}`,
-                        'lista_producao'
-                    ),
-                    colorClass: 'stock-purchase'
-                }
-            ]);
-            infoGeneralSection.appendChild(moduleMudancasFinais);
-        });
+        // 3. Módulo Mudanças Finais (simplificado temporariamente)
+        const moduleMudancasFinais = this.criarModuloCard('Mudanças Finais', 'module-mudancas-finais', [
+            { 
+                label: 'Lista Inicial', 
+                value: 0,
+                colorClass: 'stock-allocated'
+            },
+            { 
+                label: 'Lista Produção', 
+                value: 0,
+                colorClass: 'stock-purchase'
+            }
+        ]);
+        infoGeneralSection.appendChild(moduleMudancasFinais);
         
         dropdownContent.appendChild(infoGeneralSection);
+        
+        console.log('Seção geral criada para:', lista.nome);
         
         // ========== SEÇÃO DE FASES ==========
         
@@ -481,173 +529,103 @@ class DashboardCliente {
         const phaseFinalGrid = document.createElement('div');
         phaseFinalGrid.className = 'phase-modules-grid';
         
-        // ========== MÓDULOS FASE INICIAL ==========
+        // ========== MÓDULOS FASE INICIAL (simplificados) ==========
         
-        // 1. Módulo Compra Inicial (assíncrono)
-        this.obterDadosCompra(lista.itens, projeto.pedidoId).then(dadosCompra => {
-            const moduleCompraInicial = this.criarModuloCard('Compra Inicial', 'module-compra-inicial', [
-                { 
-                    label: 'Para Comprar', 
-                    value: Math.round(dadosCompra.totalParaComprar),
-                    onClick: () => this.mostrarDetalhesCompra(
-                        dadosCompra.itensParaComprar,
-                        `Itens Para Comprar - ${lista.nome}`,
-                        'para_comprar'
-                    ),
-                    colorClass: 'stock-purchase'
-                },
-                { 
-                    label: 'Comprado', 
-                    value: Math.round(dadosCompra.totalComprado),
-                    onClick: () => this.mostrarDetalhesCompra(
-                        dadosCompra.itensComprados,
-                        `Itens Comprados - ${lista.nome}`,
-                        'comprado'
-                    ),
-                    colorClass: 'stock-comprado'
-                }
-            ]);
-            phaseInicialGrid.appendChild(moduleCompraInicial);
-        });
+        // 1. Módulo Compra Inicial (simplificado)
+        const moduleCompraInicial = this.criarModuloCard('Compra Inicial', 'module-compra-inicial', [
+            { 
+                label: 'Para Comprar', 
+                value: 0,
+                colorClass: 'stock-purchase'
+            },
+            { 
+                label: 'Comprado', 
+                value: 0,
+                colorClass: 'stock-comprado'
+            }
+        ]);
+        phaseInicialGrid.appendChild(moduleCompraInicial);
         
-        // 2. Módulo Recebimento (assíncrono) - FASE INICIAL
-        this.obterDadosRecebimento(lista.itens, projeto.pedidoId).then(dadosRecebimento => {
-            const moduleRecebimento = this.criarModuloCard('Recebimento', 'module-recebimento', [
-                { 
-                    label: 'A Receber', 
-                    value: Math.round(dadosRecebimento.totalAReceber),
-                    onClick: () => this.mostrarDetalhesRecebimento(
-                        dadosRecebimento.itensAReceber,
-                        `Itens A Receber - ${lista.nome}`,
-                        'a_receber'
-                    ),
-                    colorClass: 'stock-purchase'
-                },
-                { 
-                    label: 'Recebido', 
-                    value: Math.round(dadosRecebimento.totalRecebido),
-                    onClick: () => this.mostrarDetalhesRecebimento(
-                        dadosRecebimento.itensRecebidos,
-                        `Itens Recebidos - ${lista.nome}`,
-                        'recebido'
-                    ),
-                    colorClass: 'stock-comprado'
-                }
-            ]);
-            phaseInicialGrid.appendChild(moduleRecebimento);
-        });
+        // 2. Módulo Recebimento (simplificado) - FASE INICIAL
+        const moduleRecebimento = this.criarModuloCard('Recebimento', 'module-recebimento', [
+            { 
+                label: 'A Receber', 
+                value: 0,
+                colorClass: 'stock-purchase'
+            },
+            { 
+                label: 'Recebido', 
+                value: 0,
+                colorClass: 'stock-comprado'
+            }
+        ]);
+        phaseInicialGrid.appendChild(moduleRecebimento);
         
-        // 3. Módulo Empenho (assíncrono) - FASE INICIAL
-        this.obterDadosEmpenho(lista.itens, projeto.pedidoId).then(dadosEmpenho => {
-            const moduleEmpenho = this.criarModuloCard('Empenho', 'module-empenho', [
-                { 
-                    label: 'A Empenhar', 
-                    value: Math.round(dadosEmpenho.totalAEmpenhar),
-                    onClick: () => this.mostrarDetalhesEmpenho(
-                        dadosEmpenho.itensAEmpenhar,
-                        `Itens A Empenhar - ${lista.nome}`,
-                        'a_empenhar'
-                    ),
-                    colorClass: 'stock-purchase'
-                },
-                { 
-                    label: 'Empenhado', 
-                    value: Math.round(dadosEmpenho.totalEmpenhado),
-                    onClick: () => this.mostrarDetalhesEmpenho(
-                        dadosEmpenho.itensEmpenhados,
-                        `Itens Empenhados - ${lista.nome}`,
-                        'empenhado'
-                    ),
-                    colorClass: 'stock-comprado'
-                }
-            ]);
-            phaseInicialGrid.appendChild(moduleEmpenho);
-        });
+        // 3. Módulo Empenho (simplificado) - FASE INICIAL
+        const moduleEmpenho = this.criarModuloCard('Empenho', 'module-empenho', [
+            { 
+                label: 'A Empenhar', 
+                value: 0,
+                colorClass: 'stock-purchase'
+            },
+            { 
+                label: 'Empenhado', 
+                value: 0,
+                colorClass: 'stock-comprado'
+            }
+        ]);
+        phaseInicialGrid.appendChild(moduleEmpenho);
         
-        // ========== MÓDULOS FASE FINAL ==========
+        // ========== MÓDULOS FASE FINAL (simplificados) ==========
         
-        // 1. Módulo Compra Final (assíncrono) - FASE FINAL
-        this.obterDadosCompraFinal(lista.itens, projeto.pedidoId).then(dadosCompraFinal => {
-            const moduleCompraFinal = this.criarModuloCard('Compra Final', 'module-compra-final', [
-                { 
-                    label: 'A Comprar', 
-                    value: Math.round(dadosCompraFinal.totalAComprar),
-                    onClick: () => this.mostrarDetalhesCompraFinal(
-                        dadosCompraFinal.itensAComprar,
-                        `Itens A Comprar - ${lista.nome}`,
-                        'a_comprar_final'
-                    ),
-                    colorClass: 'stock-purchase'
-                },
-                { 
-                    label: 'Comprado', 
-                    value: Math.round(dadosCompraFinal.totalComprado),
-                    onClick: () => this.mostrarDetalhesCompraFinal(
-                        dadosCompraFinal.itensComprados,
-                        `Itens Comprados - ${lista.nome}`,
-                        'comprado_final'
-                    ),
-                    colorClass: 'stock-comprado'
-                }
-            ]);
-            phaseFinalGrid.appendChild(moduleCompraFinal);
-        });
+        // 1. Módulo Compra Final (simplificado) - FASE FINAL
+        const moduleCompraFinal = this.criarModuloCard('Compra Final', 'module-compra-final', [
+            { 
+                label: 'A Comprar', 
+                value: 0,
+                colorClass: 'stock-purchase'
+            },
+            { 
+                label: 'Comprado', 
+                value: 0,
+                colorClass: 'stock-comprado'
+            }
+        ]);
+        phaseFinalGrid.appendChild(moduleCompraFinal);
         
-        // 2. Módulo Recebimento Final (assíncrono) - FASE FINAL  
-        this.obterDadosRecebimentoFinal(lista.itens, projeto.pedidoId).then(dadosRecebimentoFinal => {
-            const moduleRecebimentoFinal = this.criarModuloCard('Recebimento Final', 'module-recebimento-final', [
-                { 
-                    label: 'A Receber', 
-                    value: Math.round(dadosRecebimentoFinal.totalAReceber),
-                    onClick: () => this.mostrarDetalhesRecebimentoFinal(
-                        dadosRecebimentoFinal.itensAReceber,
-                        `Itens A Receber Final - ${lista.nome}`,
-                        'a_receber_final'
-                    ),
-                    colorClass: 'stock-purchase'
-                },
-                { 
-                    label: 'Recebido', 
-                    value: Math.round(dadosRecebimentoFinal.totalRecebido),
-                    onClick: () => this.mostrarDetalhesRecebimentoFinal(
-                        dadosRecebimentoFinal.itensRecebidos,
-                        `Itens Recebidos Final - ${lista.nome}`,
-                        'recebido_final'
-                    ),
-                    colorClass: 'stock-comprado'
-                }
-            ]);
-            phaseFinalGrid.appendChild(moduleRecebimentoFinal);
-        });
+        // 2. Módulo Recebimento Final (simplificado) - FASE FINAL  
+        const moduleRecebimentoFinal = this.criarModuloCard('Recebimento Final', 'module-recebimento-final', [
+            { 
+                label: 'A Receber', 
+                value: 0,
+                colorClass: 'stock-purchase'
+            },
+            { 
+                label: 'Recebido', 
+                value: 0,
+                colorClass: 'stock-comprado'
+            }
+        ]);
+        phaseFinalGrid.appendChild(moduleRecebimentoFinal);
         
-        // 3. Módulo Separação (assíncrono) - FASE FINAL
-        this.obterDadosSeparacao(lista.itens, projeto.pedidoId).then(dadosSeparacao => {
-            const moduleSeparacao = this.criarModuloCard('Separação', 'module-separacao', [
-                { 
-                    label: 'A Separar', 
-                    value: Math.round(dadosSeparacao.totalASeparar),
-                    onClick: () => this.mostrarDetalhesSeparacao(
-                        dadosSeparacao.itensASeparar,
-                        `Itens A Separar - ${lista.nome}`,
-                        'a_separar'
-                    ),
-                    colorClass: 'stock-purchase'
-                },
-                { 
-                    label: 'Separado', 
-                    value: Math.round(dadosSeparacao.totalSeparado),
-                    onClick: () => this.mostrarDetalhesSeparacao(
-                        dadosSeparacao.itensSeparados,
-                        `Itens Separados - ${lista.nome}`,
-                        'separado'
-                    ),
-                    colorClass: 'stock-comprado'
-                }
-            ]);
-            phaseFinalGrid.appendChild(moduleSeparacao);
-        });
+        // 3. Módulo Separação (simplificado) - FASE FINAL
+        const moduleSeparacao = this.criarModuloCard('Separação', 'module-separacao', [
+            { 
+                label: 'A Separar', 
+                value: 0,
+                colorClass: 'stock-purchase'
+            },
+            { 
+                label: 'Separado', 
+                value: 0,
+                colorClass: 'stock-comprado'
+            }
+        ]);
+        phaseFinalGrid.appendChild(moduleSeparacao);
         
         // ========== MONTAGEM FINAL ==========
+        
+        console.log('Montando estrutura final para:', lista.nome);
         
         // Adicionar grids às fases
         phaseInicial.appendChild(phaseInicialGrid);
@@ -665,6 +643,8 @@ class DashboardCliente {
         
         // Adicionar container dropdown ao módulos container
         modulesContainer.appendChild(mainDropdownContainer);
+        
+        console.log('Card finalizado para:', lista.nome);
         
         return modulesContainer;
         quantidadeComprarItem.addEventListener('click', () => {

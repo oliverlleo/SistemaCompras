@@ -34,6 +34,9 @@ class PedidosApp {
       this.formHandler = new FormHandler();
       this.dashboardManager = new DashboardManager();
 
+      // Tornar uiManager globalmente acessível para os botões de deletar
+      window.uiManager = this.uiManager;
+
       // Configurar interface (não usado no dashboard, mas mantido para compatibilidade)
       // this.setupUI();
       
@@ -504,21 +507,32 @@ app.preencherModalListaProducao = function(dados) {
 // Carregar dados para os cards
 app.carregarDadosAnaliseFinal = async function() {
   try {
+    // Verificar se os elementos existem na página atual
+    const totalItensInicialEl = document.getElementById('totalItensListaInicial');
+    const quantidadeTotalInicialEl = document.getElementById('quantidadeTotalListaInicial');
+    const totalItensProducaoEl = document.getElementById('totalItensListaProducao');
+    const quantidadeTotalProducaoEl = document.getElementById('quantidadeTotalListaProducao');
+    
+    if (!totalItensInicialEl || !quantidadeTotalInicialEl || !totalItensProducaoEl || !quantidadeTotalProducaoEl) {
+      // Elementos não existem nesta página, pular execução
+      return;
+    }
+    
     // Dados lista inicial
     const dadosListaInicial = await this.obterDadosListaInicial();
     const totalItensInicial = dadosListaInicial.length;
     const quantidadeTotalInicial = dadosListaInicial.reduce((acc, item) => acc + item.quantidade, 0);
     
-    document.getElementById('totalItensListaInicial').textContent = totalItensInicial;
-    document.getElementById('quantidadeTotalListaInicial').textContent = quantidadeTotalInicial.toFixed(2);
+    totalItensInicialEl.textContent = totalItensInicial;
+    quantidadeTotalInicialEl.textContent = quantidadeTotalInicial.toFixed(2);
     
     // Dados lista produção
     const dadosListaProducao = await this.obterDadosListaProducao();
     const totalItensProducao = dadosListaProducao.length;
     const quantidadeTotalProducao = dadosListaProducao.reduce((acc, item) => acc + item.quantidade, 0);
     
-    document.getElementById('totalItensListaProducao').textContent = totalItensProducao;
-    document.getElementById('quantidadeTotalListaProducao').textContent = quantidadeTotalProducao.toFixed(2);
+    totalItensProducaoEl.textContent = totalItensProducao;
+    quantidadeTotalProducaoEl.textContent = quantidadeTotalProducao.toFixed(2);
     
   } catch (error) {
     console.error('Erro ao carregar dados análise final:', error);

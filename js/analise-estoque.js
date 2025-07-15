@@ -426,30 +426,74 @@ class AnaliseEstoqueManager {
         const firstRow = data[0];
         const headers = Object.keys(firstRow);
 
-        // Variações possíveis para colunas de estoque
+        // Variações possíveis para colunas de estoque (alinhado com file-processor.js)
         const headerVariations = {
-            codigo: ['codigo', 'cód', 'cod', 'code', 'id', 'item', 'código'],
-            quantidade: ['quantidade', 'qtde', 'qtd', 'quant', 'quantity', 'qty', 'estoque']
+            codigo: ['codigo', 'cod', 'cód', 'doc', 'code', 'id', 'código', 'cdigo', 'item'],
+            quantidade: ['quantidade', 'quant', 'qtde', 'qtd', 'qty', 'qt', 'comprar', 'total', 'quantity', 'estoque']
         };
 
-        // Encontrar colunas correspondentes
+        // Função para normalizar texto (igual ao file-processor.js)
+        const normalizeText = (text) => {
+            if (!text) return '';
+            try {
+                return text.toString()
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[;\.,-\/#!$%\^&\*;:{}=\-_`~()]/g, '')
+                    .trim();
+            } catch (error) {
+                return text.toString()
+                    .toLowerCase()
+                    .replace(/[áàãâä]/gi, 'a')
+                    .replace(/[éèêë]/gi, 'e')
+                    .replace(/[íìîï]/gi, 'i')
+                    .replace(/[óòõôö]/gi, 'o')
+                    .replace(/[úùûü]/gi, 'u')
+                    .replace(/[ç]/gi, 'c')
+                    .replace(/[;\.,-\/#!$%\^&\*;:{}=\-_`~()]/g, '')
+                    .trim();
+            }
+        };
+
+        // Encontrar colunas correspondentes com busca melhorada
         const mappedHeaders = {};
         
         for (const [key, variations] of Object.entries(headerVariations)) {
-            const foundHeader = headers.find(header => 
-                variations.some(variation => 
-                    header.toLowerCase().includes(variation.toLowerCase())
-                )
-            );
+            const foundHeader = headers.find(header => {
+                if (!header) return false;
+                const normalizedHeader = normalizeText(header);
+                
+                return variations.some(variation => {
+                    const normalizedVariation = normalizeText(variation);
+                    
+                    // Correspondência exata tem prioridade
+                    if (normalizedHeader === normalizedVariation) {
+                        return true;
+                    }
+                    
+                    // Para letras simples, exige correspondência exata
+                    if (normalizedVariation.length === 1) {
+                        return normalizedHeader === normalizedVariation;
+                    }
+                    
+                    // Para palavras maiores, permite correspondência parcial
+                    return normalizedHeader.includes(normalizedVariation) || 
+                           normalizedVariation.includes(normalizedHeader);
+                });
+            });
             
             if (foundHeader) {
                 mappedHeaders[key] = foundHeader;
+                console.log(`✅ Campo '${key}' mapeado para coluna '${foundHeader}'`);
             }
         }
 
         // Verificar se as colunas essenciais foram encontradas
         if (!mappedHeaders.codigo || !mappedHeaders.quantidade) {
             console.error('❌ Colunas essenciais não encontradas:', mappedHeaders);
+            console.error('❌ Cabeçalhos disponíveis:', headers);
+            console.error('❌ Procurando por:', headerVariations);
             return [];
         }
 
@@ -510,12 +554,24 @@ class AnaliseEstoqueManager {
         // Limpar tabela
         tableBody.innerHTML = '';
 
-        // 🎯 NOVA FUNCIONALIDADE: Filtrar itens que não devem aparecer na análise
+        // 🎯 FUNCIONALIDADE APRIMORADA: Filtrar itens que não devem aparecer na análise
+        console.log('🔍 Iniciando filtro de itens para exibição...');
+        
         const itensParaExibir = this.itensPedido.filter(item => {
-            return !this.isItemTotalmenteCompleto(item);
+            const isCompleto = this.isItemTotalmenteCompleto(item);
+            if (isCompleto) {
+                console.log(`⏭️ Item ${item.codigo} não será exibido (completo)`);
+            }
+            return !isCompleto;
         });
 
         console.log(`📊 Filtro aplicado: ${this.itensPedido.length} total, ${itensParaExibir.length} para exibir`);
+        
+        // Se todos os itens foram processados, mostrar mensagem
+        if (this.itensPedido.length > 0 && itensParaExibir.length === 0) {
+            console.log('🎉 Todos os itens foram processados!');
+            this.showMessage('🎉 Todos os itens deste pedido foram analisados e processados!', 'success');
+        }
 
         // Renderizar apenas itens não completos
         itensParaExibir.forEach((item, index) => {
@@ -529,12 +585,15 @@ class AnaliseEstoqueManager {
     }
 
     /**
-     * 🎯 NOVA FUNÇÃO: Verifica se um item está totalmente completo
+     * 🎯 FUNÇÃO APRIMORADA: Verifica se um item está totalmente completo
      * Um item está completo quando a soma de alocado + compra >= quantidade necessária
      * OU quando possui a flag ocultarDaAnalise = true salva no Firebase
      */
     isItemTotalmenteCompleto(item) {
-        if (!item) return false;
+        if (!item) {
+            console.log('🔍 Item inválido para verificação de completude');
+            return false;
+        }
 
         // Verificar primeiro se existe a flag no Firebase
         if (item.ocultarDaAnalise === true) {
@@ -542,18 +601,25 @@ class AnaliseEstoqueManager {
             return true;
         }
 
-        const qtdeNecessaria = item.quantidade || 0;
-        const qtdeAlocar = item.quantidadeAlocar || 0;
-        const qtdeComprar = item.quantidadeComprar || 0;
+        const qtdeNecessaria = parseFloat(item.quantidade) || 0;
+        const qtdeAlocar = parseFloat(item.quantidadeAlocar) || 0;
+        const qtdeComprar = parseFloat(item.quantidadeComprar) || 0;
         
         // Verificar se as quantidades alocadas + compradas atendem à necessidade total
         const qtdeTotalProcessada = qtdeAlocar + qtdeComprar;
-        const isCompleto = qtdeTotalProcessada >= qtdeNecessaria;
+        
+        // Usar uma pequena tolerância para evitar problemas de ponto flutuante
+        const tolerancia = 0.001;
+        const isCompleto = (qtdeTotalProcessada + tolerancia) >= qtdeNecessaria;
 
-        // Log para debug (remover em produção se necessário)
-        if (isCompleto) {
-            console.log(`✅ Item ${item.codigo} completo: Necessário=${qtdeNecessaria}, Alocado=${qtdeAlocar}, Compra=${qtdeComprar}, Total=${qtdeTotalProcessada}`);
-        }
+        // Log detalhado para debug
+        console.log(`🔍 Verificação completude - Item ${item.codigo}:`);
+        console.log(`   - Necessário: ${qtdeNecessaria}`);
+        console.log(`   - Alocado: ${qtdeAlocar}`);
+        console.log(`   - Compra: ${qtdeComprar}`);
+        console.log(`   - Total Processado: ${qtdeTotalProcessada}`);
+        console.log(`   - Status: ${item.statusItem || 'Pendente'}`);
+        console.log(`   - Completo: ${isCompleto}`);
 
         return isCompleto;
     }
@@ -912,18 +978,31 @@ class AnaliseEstoqueManager {
                 console.log('✅ Novo registro de estoque criado');
             }
 
-            // 🎯 NOVA FUNCIONALIDADE: Atualizar interface e re-renderizar tabela se item completo
-            const itemCompleto = this.isItemTotalmenteCompleto(itemLocal);
-            
+            // Atualizar status primeiro
             this.updateItemStatus(itemId, novoStatus);
             this.updateProgressStats();
-            this.checkAnaliseCompleta();
-
-            // Se o item foi completado, re-renderizar a tabela para ocultá-lo
-            if (itemCompleto) {
-                console.log(`🎯 Item ${item.codigo} completado - re-renderizando tabela`);
-                this.renderTabelaConfronto();
+            
+            // 🎯 FUNCIONALIDADE CORRIGIDA: Verificar se item está completo APÓS atualizar os dados
+            // Usar os valores mais atualizados para a verificação
+            const itemAtualizado = this.itensPedido.find(i => i.id === itemId);
+            if (itemAtualizado) {
+                // Atualizar com os novos valores calculados
+                itemAtualizado.quantidadeAlocar = qtdeAlocarTotal;
+                itemAtualizado.quantidadeComprar = qtdeComprarTotal;
+                itemAtualizado.statusItem = novoStatus;
+                
+                const itemCompleto = this.isItemTotalmenteCompleto(itemAtualizado);
+                
+                // Se o item foi completado, re-renderizar a tabela para ocultá-lo
+                if (itemCompleto) {
+                    console.log(`🎯 Item ${item.codigo} completado após alocação - re-renderizando tabela`);
+                    setTimeout(() => {
+                        this.renderTabelaConfronto();
+                    }, 100); // Pequeno delay para garantir que o DOM foi atualizado
+                }
             }
+            
+            this.checkAnaliseCompleta();
 
             if (showMessage) {
                 this.showMessage(`✅ Item ${item.codigo} alocado do estoque com sucesso!`, 'success');
@@ -1038,6 +1117,15 @@ class AnaliseEstoqueManager {
         // Atualizar item na lista local se ainda não foi atualizado
         if (item && item.statusItem !== newStatus) {
             item.statusItem = newStatus;
+            
+            // 🎯 VERIFICAÇÃO ADICIONAL: Se o item ficou completo após atualização de status, re-renderizar
+            const isCompletoAposStatus = this.isItemTotalmenteCompleto(item);
+            if (isCompletoAposStatus) {
+                console.log(`🎯 Item ${item.codigo} ficou completo após atualização de status - re-renderizando`);
+                setTimeout(() => {
+                    this.renderTabelaConfronto();
+                }, 150);
+            }
         }
 
         // Atualizar controles de seleção
@@ -1673,18 +1761,25 @@ class AnaliseEstoqueManager {
                 throw err;
             }
 
-            // 🎯 NOVA FUNCIONALIDADE: Atualizar interface e re-renderizar tabela se item completo
-            const itemCompleto = this.isItemTotalmenteCompleto(itemLocal);
-            
+            // Atualizar status primeiro
             this.updateItemStatus(itemId, novoStatus);
             this.updateProgressStats();
-            this.checkAnaliseCompleta();
-
-            // Se o item foi completado, re-renderizar a tabela para ocultá-lo
-            if (itemCompleto) {
-                console.log(`🎯 Item ${item.codigo} completado - re-renderizando tabela`);
-                this.renderTabelaConfronto();
+            
+            // 🎯 FUNCIONALIDADE CORRIGIDA: Verificar se item está completo APÓS atualizar os dados
+            // Usar os valores mais atualizados para a verificação
+            if (itemLocal) {
+                const itemCompleto = this.isItemTotalmenteCompleto(itemLocal);
+                
+                // Se o item foi completado, re-renderizar a tabela para ocultá-lo
+                if (itemCompleto) {
+                    console.log(`🎯 Item ${item.codigo} completado após compra - re-renderizando tabela`);
+                    setTimeout(() => {
+                        this.renderTabelaConfronto();
+                    }, 100); // Pequeno delay para garantir que o DOM foi atualizado
+                }
             }
+            
+            this.checkAnaliseCompleta();
 
         } catch (error) {
             console.error('❌ Erro ao solicitar compra:', error);

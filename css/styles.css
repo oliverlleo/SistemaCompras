@@ -1087,6 +1087,172 @@ body {
   }
 }
 
+/* Modal Styles */
+.modal {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 1rem;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  width: 100%;
+  max-width: 6xl;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.modal-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Modal Form Content */
+.modal-form-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  height: 100%;
+  min-height: 0;
+}
+
+.form-section-modal {
+  padding: 1.5rem;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+.preview-section-modal {
+  padding: 1.5rem;
+  background-color: #f8fafc;
+  border-left: 1px solid #e5e7eb;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+/* Contenedor de uploads com organização em grid */
+#materiaisContainerModal {
+  display: block;
+  margin-bottom: 1.5rem;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  overflow-y: auto;
+  max-height: 350px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: #fafafa;
+}
+
+/* Wrapper para as zonas de upload */
+.upload-zones-wrapper {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+  gap: 1rem !important;
+  width: 100% !important;
+  padding: 1rem;
+  min-height: 800px;
+}
+
+/* Responsividade para Modal */
+@media (max-width: 1280px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .preview-section-modal {
+    border-left: none;
+    border-top: 1px solid #e5e7eb;
+  }
+}
+
+@media (max-width: 768px) {
+  .modal {
+    padding: 0.5rem;
+  }
+  
+  .modal-content {
+    max-height: 95vh;
+  }
+  
+  .modal-header {
+    padding: 1rem;
+  }
+  
+  .form-section-modal,
+  .preview-section-modal {
+    padding: 1rem;
+    max-height: 60vh;
+  }
+  
+  #materiaisContainerModal {
+    max-height: 250px;
+  }
+}
+
 /* Utilitários */
 .hidden {
   display: none !important;
@@ -1626,11 +1792,13 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden; /* Oculta a rolagem do corpo principal */
+  min-height: 0; /* Força os filhos flexíveis a respeitarem os limites */
 }
 
 .modal-form-content {
   flex: 1;
   overflow: hidden; /* Oculta a rolagem deste container */
+  min-height: 0; /* Força os filhos flexíveis a respeitarem os limites */
 }
 
 .form-grid {
@@ -1639,6 +1807,7 @@ body {
   gap: 2rem;
   height: 100%;
   overflow: hidden; /* Oculta a rolagem do grid */
+  min-height: 0; /* Força as colunas do grid a respeitarem os limites */
 }
 
 .form-section-modal {
@@ -1646,6 +1815,11 @@ body {
   border-radius: 8px;
   padding: 1.5rem;
   overflow-y: auto; /* Habilita a rolagem APENAS nesta seção */
+  max-height: 70vh; /* Define altura máxima para garantir que a rolagem apareça */
+  min-height: 0; /* Permite que a seção seja menor que o conteúdo */
+  overscroll-behavior: contain; /* Evita que o scroll se propague para elementos pais */
+  scroll-behavior: smooth; /* Torna a rolagem mais suave */
+  will-change: transform; /* Melhora a performance de rolagem */
 }
 
 .preview-section-modal {
@@ -1656,6 +1830,8 @@ body {
   overflow: hidden; /* Garante que esta seção não role */
   display: flex;
   flex-direction: column;
+  max-height: 70vh; /* Define altura máxima consistente */
+  min-height: 0; /* Permite que a seção seja menor que o conteúdo */
 }
 
 
@@ -1697,6 +1873,10 @@ body {
   transition: all 0.3s ease;
   cursor: pointer;
   margin-bottom: 1rem;
+  position: relative; /* Garante que os elementos filhos estejam posicionados relativos a este */
+  overflow: hidden; /* Evita que o conteúdo vaze */
+  height: 200px; /* Altura fixa para manter consistência */
+  min-height: 200px; /* Altura mínima igual à altura fixa */
 }
 
 .form-section-modal .upload-zone:hover {
@@ -1707,6 +1887,31 @@ body {
 /* Estados especiais das upload zones */
 .form-section-modal .upload-zone .upload-success {
   animation: fadeIn 0.5s ease-in-out;
+  position: absolute; /* Posicionamento absoluto para não afetar o layout */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #f8fafc;
+  z-index: 5;
+}
+
+.form-section-modal .upload-zone .upload-error {
+  position: absolute; /* Posicionamento absoluto para não afetar o layout */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #f8fafc;
+  z-index: 5;
 }
 
 .form-section-modal .upload-zone .upload-success.existing-data {
@@ -2016,7 +2221,81 @@ body {
   
   .form-section-modal,
   .preview-section-modal {
-    max-height: 50vh;
+    max-height: 60vh; /* Aumenta a altura em mobile para melhor usabilidade */
+  }
+  
+  /* Garantir que em mobile a rolagem funcione bem */
+  .form-section-modal {
+    -webkit-overflow-scrolling: touch; /* Rolagem suave no iOS */
+    scrollbar-width: thin; /* Firefox - scrollbar mais fina */
+  }
+  
+  .form-section-modal::-webkit-scrollbar {
+    width: 4px; /* Scrollbar mais fina no Chrome/Safari */
+  }
+  
+  .form-section-modal::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 2px;
+  }
+  
+  .form-section-modal::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+  }
+  
+  .form-section-modal::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+  
+  /* Materiais Section no Modal */
+  #materiaisSectionModal {
+    margin-top: 1.5rem;
+    border-top: 2px solid #e2e8f0;
+    padding-top: 1.5rem;
+  }
+  
+  /* Contenedor de uploads com organização em grid */
+  #materiaisContainerModal {
+    display: block; /* Mudança para block para permitir rolagem vertical */
+    margin-bottom: 1.5rem;
+    width: 100%;
+    position: relative;
+    z-index: 1; /* Garante que fique abaixo dos estados de sucesso/erro */
+    overflow-y: auto; /* Habilita rolagem vertical */
+    max-height: 350px; /* Define altura máxima para forçar a rolagem */
+    border: 1px solid #e2e8f0; /* Borda para visualizar o container */
+    border-radius: 8px;
+    background-color: #fafafa; /* Cor de fundo para destacar a área de rolagem */
+  }
+  
+  /* Wrapper para as zonas de upload */
+  .upload-zones-wrapper {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 1rem !important;
+    width: 100% !important;
+    padding: 1rem; /* Adiciona padding interno */
+    min-height: 800px; /* Altura mínima MUITO MAIOR para forçar scroll SEMPRE */
+  }
+  
+  /* Scrollbar personalizada para o container de materiais */
+  #materiaisContainerModal::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  #materiaisContainerModal::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+  
+  #materiaisContainerModal::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 4px;
+  }
+  
+  #materiaisContainerModal::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
   }
 }
 

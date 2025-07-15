@@ -1,15 +1,15 @@
 // Processador de arquivos CSV/XLSX
 class FileProcessor {
   constructor() {
-    // Dicionário de variações de nomes de colunas (com variações de 1 letra de volta)
+    // Dicionário de variações de nomes de colunas (CORRIGIDO - mapeamento específico)
     this.headerVariations = {
       codigo: ['codigo', 'cod', 'cód', 'doc', 'code', 'id', 'código', 'c\u00f3digo', 'cdigo', 'c?digo', 'cdigo'],
       descricao: ['descricao', 'desc', 'descri', 'item', 'produto', 'description', 'produto_descricao', 'descrição', 'descri\u00e7\u00e3o', 'descrio', 'descri??o', 'descricao'],
       quantidade: ['quantidade', 'quant', 'qtde', 'qtd', 'qty', 'qt', 'qtd', 'qtd.', 'comprar', 'total'],
-      altura: ['altura', 'alt', 'a', 'v', 'vertical', 'h'],
-      largura: ['largura', 'l', 'larg', 'horizontal', 'w', 'width'],
+      altura: ['altura', 'alt', 'h', 'vertical'], // H = altura
+      largura: ['largura', 'l', 'larg', 'horizontal', 'w', 'width'], // L = largura  
       cor: ['cor', 'color', 'colours'],
-      medida: ['medida', 'medidas', 'dimension', 'size', 'tamanho'],
+      medida: ['medida', 'medidas', 'dimension', 'size', 'tamanho'], // Medida é campo separado
       preco: ['preco', 'preço', 'valor', 'price', 'custo'],
       fornecedor: ['fornecedor', 'supplier', 'vendor', 'entrega fornecedor'],
       observacoes: ['observacoes', 'observações', 'obs', 'notes', 'comentarios']
@@ -57,32 +57,66 @@ class FileProcessor {
     console.log('Cabeçalhos encontrados:', headers);
     console.log('Cabeçalhos normalizados:', normalizedHeaders);
     
-    // Para cada campo padrão, procurar correspondência
+    // 🎯 CORREÇÃO: Ignorar colunas vazias durante o mapeamento
+    const filteredHeaders = [];
+    const indexMap = [];
+    
+    for (let i = 0; i < headers.length; i++) {
+      const header = headers[i];
+      if (header && header.toString().trim() !== '' && header.toString().trim() !== 'vazio' && header.toString().trim() !== 'nada') {
+        filteredHeaders.push(header);
+        indexMap.push(i); // Mapear o índice real da coluna
+      }
+    }
+    
+    console.log('🔍 Cabeçalhos filtrados (sem vazios):', filteredHeaders);
+    console.log('🔍 Mapeamento de índices:', indexMap);
+    
+    // Normalizar apenas cabeçalhos válidos
+    const normalizedValidHeaders = filteredHeaders.map(h => this.normalizeText(h.toString().trim()));
+    
+    // Para cada campo padrão, procurar correspondência apenas em colunas válidas
     Object.keys(this.headerVariations).forEach(standardField => {
       const variations = this.headerVariations[standardField];
       
-      for (let i = 0; i < normalizedHeaders.length; i++) {
-        const normalizedHeader = normalizedHeaders[i];
+      for (let i = 0; i < normalizedValidHeaders.length; i++) {
+        const normalizedHeader = normalizedValidHeaders[i];
+        const originalIndex = indexMap[i]; // Índice real na planilha original
         
-        // CORREÇÃO: Lógica de correspondência aprimorada
+        // Ignorar headers vazios
+        if (!normalizedHeader || normalizedHeader.length === 0) {
+          continue;
+        }
+        
+        // CORREÇÃO: Lógica de correspondência mais rigorosa para evitar conflitos
         const found = variations.some(variation => {
           const normalizedVariation = this.normalizeText(variation);
           
-          // Se a variação tem apenas uma letra, exige correspondência exata.
+          // Correspondência exata tem prioridade
+          if (normalizedHeader === normalizedVariation) {
+            return true;
+          }
+          
+          // Para letras simples (H, L), exige correspondência exata para evitar conflitos
           if (normalizedVariation.length === 1) {
             return normalizedHeader === normalizedVariation;
           }
           
-          // Para variações maiores, mantém a busca flexível.
+          // Para palavras maiores, permite correspondência parcial
           return normalizedHeader.includes(normalizedVariation) || 
-                 normalizedHeader === normalizedVariation ||
-                 normalizedVariation.includes(normalizedHeader) ||
-                 normalizedHeader.replace(/[^a-z0-9]/g, '').includes(normalizedVariation.replace(/[^a-z0-9]/g, ''));
+                 normalizedVariation.includes(normalizedHeader);
         });
         
         if (found) {
-          headerMap[standardField] = i;
-          console.log(`Campo '${standardField}' mapeado para coluna '${headers[i]}' (índice ${i})`);
+          // Verificar se não há conflito com mapeamento já existente
+          const existingMapping = Object.keys(headerMap).find(key => headerMap[key] === originalIndex);
+          if (existingMapping) {
+            console.warn(`Conflito detectado: coluna ${originalIndex} (${headers[originalIndex]}) já mapeada para '${existingMapping}', ignorando mapeamento para '${standardField}'`);
+            continue;
+          }
+          
+          headerMap[standardField] = originalIndex; // Usar índice original
+          console.log(`✅ Campo '${standardField}' mapeado para coluna '${filteredHeaders[i]}' (índice real ${originalIndex})`);
           break;
         }
       }
@@ -96,10 +130,21 @@ class FileProcessor {
     const required = ['codigo', 'descricao', 'quantidade'];
     const missing = required.filter(field => !(field in headerMap));
     
+    console.log('🔍 Verificação de campos obrigatórios:');
+    console.log('   - Campos requeridos:', required);
+    console.log('   - Campos mapeados:', Object.keys(headerMap));
+    console.log('   - Mapeamento completo:', headerMap);
+    
     if (missing.length > 0) {
+      console.error('❌ Campos obrigatórios não encontrados:', missing);
+      console.log('💡 Dica: Verifique se as colunas têm os nomes corretos:');
+      console.log('   - Para código: "código", "codigo", "cod", "id"');
+      console.log('   - Para descrição: "descrição", "descricao", "desc", "produto", "item"');
+      console.log('   - Para quantidade: "quantidade", "qtde", "qtd", "quant"');
       throw new Error(`Campos obrigatórios não encontrados: ${missing.join(', ')}`);
     }
     
+    console.log('✅ Todos os campos obrigatórios foram encontrados!');
     return true;
   }
 

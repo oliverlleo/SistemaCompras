@@ -1002,6 +1002,7 @@ class DashboardManager {
                       <th>Cor</th>
                       <th>Medida</th>
                       <th>Observações</th>
+                      <th style="width: 100px;">Ações</th>
                     </tr>
                   </thead>
                   <tbody id="previewTableBodyModal">

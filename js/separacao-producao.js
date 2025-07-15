@@ -124,15 +124,15 @@ class SistemaSeparacaoProducao {
         try {
             this.showLoading('Carregando clientes...');
             
-            // Buscar itens que têm QtdItemNecFinal > 0 (campo correto salvo pelo tratamento-empenho)
+            // Buscar itens que têm QtdItemNecFinal != 0 (incluindo valores negativos para devolução)
+            // CORREÇÃO: Não usar > 0, pois valores negativos indicam devolução ao estoque
             const itensSnapshot = await this.db.collection('itens')
-                .where('QtdItemNecFinal', '>', 0)
                 .get();
             
-            console.log(`📊 ${itensSnapshot.size} itens com QtdItemNecFinal > 0 encontrados`);
+            console.log(`📊 ${itensSnapshot.size} itens encontrados para análise`);
             
             if (itensSnapshot.empty) {
-                this.showToast('Nenhum item encontrado para separação. Verifique se a análise final foi realizada.', 'warning');
+                this.showToast('Nenhum item encontrado. Verifique se há dados no sistema.', 'warning');
                 this.hideLoading();
                 return;
             }
@@ -241,7 +241,9 @@ class SistemaSeparacaoProducao {
                         // Filtrar no lado do cliente para evitar índice composto
                         const temItensParaSeparacao = itensSnapshot.docs.some(doc => {
                             const item = doc.data();
-                            return (item.QtdItemNecFinal || 0) > 0;
+                            const temQuantidadeParaSeparar = (item.QtdItemNecFinal || 0) > 0;
+                            const temQuantidadeParaDevolver = item.devolucaoEstoque && item.devolucaoEstoque.qtde > 0;
+                            return temQuantidadeParaSeparar || temQuantidadeParaDevolver;
                         });
                         
                         if (temItensParaSeparacao && pedido.tipoProjeto) {
@@ -321,7 +323,10 @@ class SistemaSeparacaoProducao {
                     // Filtrar no lado do cliente para evitar índice composto
                     itensSnapshot.forEach(doc => {
                         const item = doc.data();
-                        if ((item.QtdItemNecFinal || 0) > 0 && item.listaMaterial) {
+                        const temQuantidadeParaSeparar = (item.QtdItemNecFinal || 0) > 0;
+                        const temQuantidadeParaDevolver = item.devolucaoEstoque && item.devolucaoEstoque.qtde > 0;
+                        
+                        if ((temQuantidadeParaSeparar || temQuantidadeParaDevolver) && item.listaMaterial) {
                             listas.add(item.listaMaterial);
                         }
                     });
@@ -410,8 +415,11 @@ class SistemaSeparacaoProducao {
                     for (const doc of itensSnapshot.docs) {
                         const item = { id: doc.id, ...doc.data() };
                         
-                        // Filtrar apenas itens com QtdItemNecFinal > 0 (campo correto)
-                        if (!item.QtdItemNecFinal || item.QtdItemNecFinal <= 0) {
+                        // CORREÇÃO: Incluir itens com QtdItemNecFinal > 0 (para separação) OU com devolucaoEstoque (para devolução)
+                        const temQuantidadeParaSeparar = item.QtdItemNecFinal && item.QtdItemNecFinal > 0;
+                        const temQuantidadeParaDevolver = item.devolucaoEstoque && item.devolucaoEstoque.qtde > 0;
+                        
+                        if (!temQuantidadeParaSeparar && !temQuantidadeParaDevolver) {
                             continue;
                         }
                         
@@ -427,7 +435,8 @@ class SistemaSeparacaoProducao {
                         // Adicionar item à lista - incluindo itens empenhados E itens recebidos
                         this.itensParaSeparacao.push(item);
                         
-                        console.log(`✅ Item ${item.codigo} - Incluído para separação (QtdItemNecFinal: ${item.QtdItemNecFinal})`);
+                        const motivo = temQuantidadeParaSeparar ? `separação (${item.QtdItemNecFinal})` : `devolução (${item.devolucaoEstoque?.qtde || 0})`;
+                        console.log(`✅ Item ${item.codigo} - Incluído para ${motivo}`);
                     }
                 } catch (err) {
                     console.warn(`⚠️ Erro ao buscar itens do pedido ${pedidoId}:`, err);
@@ -455,8 +464,11 @@ class SistemaSeparacaoProducao {
                         continue;
                     }
                     
-                    // Filtrar apenas itens com QtdItemNecFinal > 0
-                    if (!item.QtdItemNecFinal || item.QtdItemNecFinal <= 0) {
+                    // CORREÇÃO: Incluir itens com QtdItemNecFinal > 0 OU com devolucaoEstoque
+                    const temQuantidadeParaSeparar = item.QtdItemNecFinal && item.QtdItemNecFinal > 0;
+                    const temQuantidadeParaDevolver = item.devolucaoEstoque && item.devolucaoEstoque.qtde > 0;
+                    
+                    if (!temQuantidadeParaSeparar && !temQuantidadeParaDevolver) {
                         continue;
                     }
                     
@@ -476,7 +488,8 @@ class SistemaSeparacaoProducao {
                     this.itensParaSeparacao.push(item);
                     itensIncluidos++;
                     
-                    console.log(`✅ Item ${item.codigo} (criado por análise) - Incluído para separação (QtdItemNecFinal: ${item.QtdItemNecFinal})`);
+                    const motivo = temQuantidadeParaSeparar ? `separação (${item.QtdItemNecFinal})` : `devolução (${item.devolucaoEstoque?.qtde || 0})`;
+                    console.log(`✅ Item ${item.codigo} (criado por análise) - Incluído para ${motivo}`);
                 }
                 
                 console.log(`📊 ${itensIncluidos} itens criados pela análise incluídos para separação`);
@@ -550,7 +563,7 @@ class SistemaSeparacaoProducao {
         if (this.itensParaSeparacao.length === 0) {
             this.tabelaItensBody.innerHTML = `
                 <tr>
-                    <td colspan="8" class="empty-state">
+                    <td colspan="10" class="empty-state">
                         <h3>Nenhum item encontrado</h3>
                         <p>Não há itens pendentes para separação nesta lista.</p>
                     </td>
@@ -563,11 +576,19 @@ class SistemaSeparacaoProducao {
         let html = '';
         
         this.itensParaSeparacao.forEach(item => {
-            // Calcular valores para as colunas (usando QtdItemNecFinal - campo correto)
-            const qtdNecessaria = item.QtdItemNecFinal || 0;
-            const compraFinal = item.compraFinal || 0;
-            const empenhado = Math.max(0, qtdNecessaria - compraFinal); // Empenhado não pode ser negativo
-            const devolucaoEstoque = this.calcularDevolucaoEstoque(item);
+            // ===== REGRA MATEMÁTICA DO SISTEMA =====
+            // 1. Total Empenhado = quantidade originalmente empenhada
+            // 2. Após análise final: Total Empenhado = Qtd Necessária + Devolução Estoque
+            // 3. Qtd Necessária = vai para separação/produção
+            // 4. Devolução Estoque = volta para estoque (pode ser parcial)
+            // 5. Compra Final = quantidade adicional que precisa ser comprada
+            
+            const qtdNecessaria = Math.max(0, item.QtdItemNecFinal || 0); // Para separação/produção
+            const compraFinal = item.compraFinal || 0; // Quantidade a comprar adicional
+            const devolucaoEstoque = this.calcularDevolucaoEstoque(item); // Quantidade a devolver
+            
+            // Total empenhado original (reconstituído pela soma)
+            const totalEmpenhado = qtdNecessaria + devolucaoEstoque;
             
             // Verificar se o item foi recebido (tem histórico de recebimentos)
             const totalRecebido = this.calcularTotalRecebidoGeral(item);
@@ -587,8 +608,8 @@ class SistemaSeparacaoProducao {
                     </td>
                     <td>${item.codigo || '-'}</td>
                     <td>${item.descricao || item.item || item.produto || '-'}</td>
+                    <td>${totalEmpenhado}</td>
                     <td>${qtdNecessaria}</td>
-                    <td>${empenhado}</td>
                     <td>${compraFinal}</td>
                     <td>${devolucaoEstoque}</td>
                     <td class="status-cell">${statusRecepcao}</td>
@@ -618,13 +639,16 @@ class SistemaSeparacaoProducao {
     
     /**
      * Calcular quantidade para devolução ao estoque
+     * CORREÇÃO: devolucaoEstoque.qtde é a quantidade PARCIAL a devolver (não o total)
      */
     calcularDevolucaoEstoque(item) {
-        if (!item.devolucaoEstoque) {
+        // Se não há registro de devolução, não há nada para devolver
+        if (!item.devolucaoEstoque || !item.devolucaoEstoque.qtde) {
             return 0;
         }
         
-        return item.devolucaoEstoque.qtde || 0;
+        // Retornar a quantidade específica a devolver (pode ser parcial)
+        return item.devolucaoEstoque.qtde;
     }
     
     /**
@@ -716,7 +740,7 @@ class SistemaSeparacaoProducao {
             this.itensParaSeparacao.find(item => item.id === id)
         ).filter(Boolean);
         
-        // Verificar se há itens com QtdItemNecFinal > 0 (campo correto)
+        // Verificar se há itens com QtdItemNecFinal > 0 (para separação)
         const temItensSeparar = itensSelecionados.some(item => (item.QtdItemNecFinal || 0) > 0);
         
         // Verificar se há itens com devolucaoEstoque
@@ -760,7 +784,7 @@ class SistemaSeparacaoProducao {
      * Abrir modal de separação
      */
     abrirModalSeparacao() {
-        // Obter itens selecionados (usando QtdItemNecFinal - campo correto)
+        // Obter itens selecionados para separação (apenas QtdItemNecFinal > 0)
         const itensSelecionados = Array.from(this.itensSelecionados).map(id => 
             this.itensParaSeparacao.find(item => item.id === id)
         ).filter(item => item && (item.QtdItemNecFinal || 0) > 0);
@@ -842,7 +866,7 @@ class SistemaSeparacaoProducao {
         try {
             this.showLoading('Separando itens para produção...');
             
-            // Obter itens selecionados (usando QtdItemNecFinal - campo correto)
+            // Obter itens selecionados para separação (apenas QtdItemNecFinal > 0)
             const itensSelecionados = Array.from(this.itensSelecionados).map(id => 
                 this.itensParaSeparacao.find(item => item.id === id)
             ).filter(item => item && (item.QtdItemNecFinal || 0) > 0);
@@ -900,7 +924,7 @@ class SistemaSeparacaoProducao {
         try {
             this.showLoading('Confirmando devolução ao estoque...');
             
-            // Obter itens selecionados
+            // Obter itens selecionados para devolução (apenas com devolucaoEstoque > 0)
             const itensSelecionados = Array.from(this.itensSelecionados).map(id => 
                 this.itensParaSeparacao.find(item => item.id === id)
             ).filter(item => item && item.devolucaoEstoque && item.devolucaoEstoque.qtde > 0);

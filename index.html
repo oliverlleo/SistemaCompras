@@ -6,7 +6,7 @@
     <title>Sistema de Gerenciamento de Pedidos</title>
     
     <!-- Tailwind CSS -->
-    <script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script><script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script><script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script><script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script><script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script>
+    <script src="https://lib.youware.com/youware-lib-editor.1752562065.js" id="yourware-lib"></script><script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script><script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script><script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script><script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script><script src="https://lib.youware.com/youware-lib-editor.1751946057.js" id="yourware-lib"></script>
     <script src="https://cdn.tailwindcss.com/3.4.16"></script>
     
     <!-- CSS customizado -->
@@ -381,17 +381,23 @@
             document.body.classList.add('mobile-device');
         }
 
-        // Event listener para botão "Ver Código"
-        document.getElementById('btnViewCode').addEventListener('click', () => {
-            window.open('./code-viewer.html', '_blank');
-        });
+        // Event listener para botão "Ver Código" (verificar se existe)
+        const btnViewCode = document.getElementById('btnViewCode');
+        if (btnViewCode) {
+            btnViewCode.addEventListener('click', () => {
+                window.open('./code-viewer.html', '_blank');
+            });
+        }
 
         // Event listeners para dropdowns "Análise", "Separação" e "Compra"
         const dropdowns = ['Analise', 'Separacao', 'Compra'];
         
         dropdowns.forEach(type => {
             const btnDropdown = document.getElementById(`btn${type}`);
+            if (!btnDropdown) return; // Pular se o botão não existir
+            
             const dropdownContainer = btnDropdown.closest('.dropdown-container');
+            if (!dropdownContainer) return; // Pular se o container não existir
             
             btnDropdown.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -420,23 +426,35 @@
         });
 
         // Event listener para botão "Dashboard"
-        document.getElementById('btnDashboardCliente').addEventListener('click', () => {
-            window.location.href = './dashboard-cliente.html';
-        });
+        const btnDashboardCliente = document.getElementById('btnDashboardCliente');
+        if (btnDashboardCliente) {
+            btnDashboardCliente.addEventListener('click', () => {
+                window.location.href = './dashboard-cliente.html';
+            });
+        }
 
         // Event listener para botão "Recebimento"
-        document.getElementById('btnRecebimento').addEventListener('click', () => {
-            window.location.href = './recebimento.html';
-        });
+        const btnRecebimento = document.getElementById('btnRecebimento');
+        if (btnRecebimento) {
+            btnRecebimento.addEventListener('click', () => {
+                window.location.href = './recebimento.html';
+            });
+        }
 
         // Event listeners para "Compra Inicial" e "Compra Final"
-        document.getElementById('btnCompraInicial').addEventListener('click', () => {
-            window.location.href = './gestao-compras.html';
-        });
+        const btnCompraInicial = document.getElementById('btnCompraInicial');
+        if (btnCompraInicial) {
+            btnCompraInicial.addEventListener('click', () => {
+                window.location.href = './gestao-compras.html';
+            });
+        }
 
-        document.getElementById('btnCompraFinal').addEventListener('click', () => {
-            window.location.href = './compra-final.html';
-        });
+        const btnCompraFinal = document.getElementById('btnCompraFinal');
+        if (btnCompraFinal) {
+            btnCompraFinal.addEventListener('click', () => {
+                window.location.href = './compra-final.html';
+            });
+        }
 
 
     </script>

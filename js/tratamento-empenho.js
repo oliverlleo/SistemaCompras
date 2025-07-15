@@ -894,7 +894,7 @@ class SistemaTratamentoEmpenho {
         // Atualizar item
         batch.update(itemRef, {
             devolucaoEstoque: devolucao,
-            statusItem: 'Separado para Produção', // Avança para próximo estágio
+            statusItem: 'Disponível', // Status final: Disponível em vez de 'Separado para Produção'
             analiseFinalRealizada: true,
             dataAnalise: firebase.firestore.Timestamp.now(),
             qtdNecFinal: qtdNecessariaFinal, // Salvar a quantidade necessária final

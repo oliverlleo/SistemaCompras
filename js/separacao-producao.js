@@ -50,6 +50,9 @@ class SistemaSeparacaoProducao {
         this.itensSelecionados = new Set();
         this.db = firebase.firestore();
         
+        // NOVA LÓGICA: Controle de estado das ações realizadas
+        this.estadoAcoes = new Map(); // itemId -> { separacaoRealizada: boolean, devolucaoRealizada: boolean }
+        
         // Inicializar
         this.init();
     }
@@ -545,7 +548,9 @@ class SistemaSeparacaoProducao {
      * Renderizar tabela de itens para separação
      */
     renderizarTabelaItens() {
-        // Resetar seleções
+        // NOVA LÓGICA: Não resetar seleções se estamos apenas atualizando a tabela
+        // (preserva seleções durante atualizações de estado)
+        const selecoesAntigas = new Set(this.itensSelecionados);
         this.itensSelecionados.clear();
         this.selectAll.checked = false;
         
@@ -598,8 +603,19 @@ class SistemaSeparacaoProducao {
             const statusRecepcao = foiRecebido ? '✅ Recebido' : '📦 Pendente';
             const statusClass = foiRecebido ? 'status-recebido' : 'status-pendente';
             
-            const separacaoDisabled = qtdNecessaria === 0 ? 'disabled' : '';
-            const devolucaoDisabled = devolucaoEstoque === 0 ? 'disabled' : '';
+            // NOVA LÓGICA: Obter estado visual das ações
+            const estadoVisual = this.obterEstadoVisualItem(item);
+            
+            // Determinar se botões devem estar desabilitados ou mostrar como concluídos
+            const separacaoDisabled = qtdNecessaria === 0 || estadoVisual.separacaoRealizada ? 'disabled' : '';
+            const devolucaoDisabled = devolucaoEstoque === 0 || estadoVisual.devolucaoRealizada ? 'disabled' : '';
+            
+            // Classes e textos para indicar ações realizadas
+            const separacaoClass = estadoVisual.separacaoRealizada ? 'btn-success' : 'btn-primary';
+            const devolucaoClass = estadoVisual.devolucaoRealizada ? 'btn-success' : 'btn-warning';
+            
+            const separacaoTexto = estadoVisual.separacaoRealizada ? '✓ Separado' : 'Separar';
+            const devolucaoTexto = estadoVisual.devolucaoRealizada ? '✓ Devolvido' : 'Devolver';
             
             html += `
                 <tr data-id="${item.id}" class="${statusClass}">
@@ -614,17 +630,17 @@ class SistemaSeparacaoProducao {
                     <td>${devolucaoEstoque}</td>
                     <td class="status-cell">${statusRecepcao}</td>
                     <td class="actions-cell">
-                        <button class="btn-action btn-primary btn-sm btn-separar" data-id="${item.id}" ${separacaoDisabled}>
+                        <button class="btn-action ${separacaoClass} btn-sm btn-separar" data-id="${item.id}" ${separacaoDisabled}>
                             <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
-                            Separar
+                            ${separacaoTexto}
                         </button>
-                        <button class="btn-action btn-warning btn-sm btn-devolver" data-id="${item.id}" ${devolucaoDisabled}>
+                        <button class="btn-action ${devolucaoClass} btn-sm btn-devolver" data-id="${item.id}" ${devolucaoDisabled}>
                             <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
                             </svg>
-                            Devolver
+                            ${devolucaoTexto}
                         </button>
                     </td>
                 </tr>
@@ -633,8 +649,23 @@ class SistemaSeparacaoProducao {
         
         this.tabelaItensBody.innerHTML = html;
         
+        // NOVA LÓGICA: Restaurar seleções anteriores quando possível
+        selecoesAntigas.forEach(itemId => {
+            const checkbox = this.tabelaItensBody.querySelector(`input[value="${itemId}"]`);
+            if (checkbox) {
+                checkbox.checked = true;
+                this.itensSelecionados.add(itemId);
+            }
+        });
+        
         // Adicionar event listeners para checkboxes e botões
         this.setupTableEventListeners();
+        
+        // Atualizar estado dos botões após restaurar seleções
+        if (this.itensSelecionados.size > 0) {
+            this.atualizarBotoesAcaoEmMassa();
+            this.atualizarSelectAll();
+        }
     }
     
     /**
@@ -740,13 +771,17 @@ class SistemaSeparacaoProducao {
             this.itensParaSeparacao.find(item => item.id === id)
         ).filter(Boolean);
         
-        // Verificar se há itens com QtdItemNecFinal > 0 (para separação)
-        const temItensSeparar = itensSelecionados.some(item => (item.QtdItemNecFinal || 0) > 0);
+        // NOVA LÓGICA: Verificar se há itens que ainda precisam de separação (não foram separados ainda)
+        const temItensSeparar = itensSelecionados.some(item => {
+            const estado = this.estadoAcoes.get(item.id) || { separacaoRealizada: false };
+            return (item.QtdItemNecFinal || 0) > 0 && !estado.separacaoRealizada;
+        });
         
-        // Verificar se há itens com devolucaoEstoque
-        const temItensDevolver = itensSelecionados.some(item => 
-            item.devolucaoEstoque && item.devolucaoEstoque.qtde > 0
-        );
+        // NOVA LÓGICA: Verificar se há itens que ainda precisam de devolução (não foram devolvidos ainda)
+        const temItensDevolver = itensSelecionados.some(item => {
+            const estado = this.estadoAcoes.get(item.id) || { devolucaoRealizada: false };
+            return item.devolucaoEstoque && item.devolucaoEstoque.qtde > 0 && !estado.devolucaoRealizada;
+        });
         
         this.btnSeparacaoEmMassa.disabled = !temItensSeparar;
         this.btnDevolucaoEmMassa.disabled = !temItensDevolver;
@@ -784,10 +819,14 @@ class SistemaSeparacaoProducao {
      * Abrir modal de separação
      */
     abrirModalSeparacao() {
-        // Obter itens selecionados para separação (apenas QtdItemNecFinal > 0)
+        // NOVA LÓGICA: Obter itens selecionados para separação (apenas os que ainda não foram separados)
         const itensSelecionados = Array.from(this.itensSelecionados).map(id => 
             this.itensParaSeparacao.find(item => item.id === id)
-        ).filter(item => item && (item.QtdItemNecFinal || 0) > 0);
+        ).filter(item => {
+            if (!item || (item.QtdItemNecFinal || 0) === 0) return false;
+            const estado = this.estadoAcoes.get(item.id) || { separacaoRealizada: false };
+            return !estado.separacaoRealizada;
+        });
         
         if (itensSelecionados.length === 0) {
             this.showToast('Nenhum item selecionado para separação', 'warning');
@@ -866,10 +905,14 @@ class SistemaSeparacaoProducao {
         try {
             this.showLoading('Separando itens para produção...');
             
-            // Obter itens selecionados para separação (apenas QtdItemNecFinal > 0)
+            // NOVA LÓGICA: Obter itens selecionados para separação (apenas os que ainda não foram separados)
             const itensSelecionados = Array.from(this.itensSelecionados).map(id => 
                 this.itensParaSeparacao.find(item => item.id === id)
-            ).filter(item => item && (item.QtdItemNecFinal || 0) > 0);
+            ).filter(item => {
+                if (!item || (item.QtdItemNecFinal || 0) === 0) return false;
+                const estado = this.estadoAcoes.get(item.id) || { separacaoRealizada: false };
+                return !estado.separacaoRealizada;
+            });
             
             if (itensSelecionados.length === 0) {
                 this.showToast('Nenhum item selecionado para separação', 'warning');
@@ -906,8 +949,8 @@ class SistemaSeparacaoProducao {
             // Mostrar toast
             this.showToast(`${itensSelecionados.length} itens separados para produção com sucesso!`, 'success');
             
-            // Remover itens da lista
-            this.removerItensSeparados(itensSelecionados.map(item => item.id));
+            // NOVA LÓGICA: Marcar separação como realizada e verificar se pode remover
+            this.marcarSeparacaoRealizada(itensSelecionados.map(item => item.id));
             
         } catch (error) {
             console.error('❌ Erro ao separar itens para produção:', error);
@@ -924,10 +967,14 @@ class SistemaSeparacaoProducao {
         try {
             this.showLoading('Confirmando devolução ao estoque...');
             
-            // Obter itens selecionados para devolução (apenas com devolucaoEstoque > 0)
+            // NOVA LÓGICA: Obter itens selecionados para devolução (apenas os que ainda não foram devolvidos)
             const itensSelecionados = Array.from(this.itensSelecionados).map(id => 
                 this.itensParaSeparacao.find(item => item.id === id)
-            ).filter(item => item && item.devolucaoEstoque && item.devolucaoEstoque.qtde > 0);
+            ).filter(item => {
+                if (!item || !item.devolucaoEstoque || item.devolucaoEstoque.qtde === 0) return false;
+                const estado = this.estadoAcoes.get(item.id) || { devolucaoRealizada: false };
+                return !estado.devolucaoRealizada;
+            });
             
             if (itensSelecionados.length === 0) {
                 this.showToast('Nenhum item selecionado com devolução pendente', 'warning');
@@ -963,8 +1010,8 @@ class SistemaSeparacaoProducao {
             // Mostrar toast
             this.showToast(`${itensSelecionados.length} devoluções ao estoque confirmadas com sucesso!`, 'success');
             
-            // Verificar se os itens devem ser removidos da lista
-            this.verificarRemocaoAposDevolucao(itensSelecionados);
+            // NOVA LÓGICA: Marcar devolução como realizada e verificar se pode remover
+            this.marcarDevolucaoRealizada(itensSelecionados.map(item => item.id));
             
         } catch (error) {
             console.error('❌ Erro ao confirmar devolução ao estoque:', error);
@@ -1009,6 +1056,96 @@ class SistemaSeparacaoProducao {
         }
     }
     
+    // NOVA LÓGICA: Funções para controle de estado das ações
+    
+    /**
+     * Marcar separação como realizada para os itens
+     */
+    marcarSeparacaoRealizada(itemIds) {
+        itemIds.forEach(itemId => {
+            if (!this.estadoAcoes.has(itemId)) {
+                this.estadoAcoes.set(itemId, { separacaoRealizada: false, devolucaoRealizada: false });
+            }
+            this.estadoAcoes.get(itemId).separacaoRealizada = true;
+        });
+        
+        // Verificar quais itens podem ser removidos
+        this.verificarRemocaoInteligente(itemIds);
+    }
+    
+    /**
+     * Marcar devolução como realizada para os itens
+     */
+    marcarDevolucaoRealizada(itemIds) {
+        itemIds.forEach(itemId => {
+            if (!this.estadoAcoes.has(itemId)) {
+                this.estadoAcoes.set(itemId, { separacaoRealizada: false, devolucaoRealizada: false });
+            }
+            this.estadoAcoes.get(itemId).devolucaoRealizada = true;
+        });
+        
+        // Verificar quais itens podem ser removidos
+        this.verificarRemocaoInteligente(itemIds);
+    }
+    
+    /**
+     * Verificar se um item pode ser removido da lista (todas as ações necessárias foram realizadas)
+     */
+    podeRemoverItem(item) {
+        const estado = this.estadoAcoes.get(item.id) || { separacaoRealizada: false, devolucaoRealizada: false };
+        
+        // Verificar se tem ações pendentes
+        const precisaSeparacao = (item.QtdItemNecFinal || 0) > 0;
+        const precisaDevolucao = item.devolucaoEstoque && item.devolucaoEstoque.qtde > 0;
+        
+        // Só pode remover se:
+        // 1. Não precisa de separação OU separação foi realizada
+        // 2. Não precisa de devolução OU devolução foi realizada
+        const separacaoOk = !precisaSeparacao || estado.separacaoRealizada;
+        const devolucaoOk = !precisaDevolucao || estado.devolucaoRealizada;
+        
+        return separacaoOk && devolucaoOk;
+    }
+    
+    /**
+     * Verificação inteligente de remoção - só remove se todas as ações foram realizadas
+     */
+    verificarRemocaoInteligente(itemIds) {
+        const idsParaRemover = [];
+        
+        itemIds.forEach(itemId => {
+            const item = this.itensParaSeparacao.find(i => i.id === itemId);
+            if (item && this.podeRemoverItem(item)) {
+                idsParaRemover.push(itemId);
+            }
+        });
+        
+        if (idsParaRemover.length > 0) {
+            // Limpar estado dos itens removidos
+            idsParaRemover.forEach(id => this.estadoAcoes.delete(id));
+            this.removerItensSeparados(idsParaRemover);
+        } else {
+            // Apenas renderizar a tabela para atualizar status visual
+            this.renderizarTabelaItens();
+        }
+    }
+    
+    /**
+     * Obter estado visual de um item para mostrar na tabela
+     */
+    obterEstadoVisualItem(item) {
+        const estado = this.estadoAcoes.get(item.id) || { separacaoRealizada: false, devolucaoRealizada: false };
+        const precisaSeparacao = (item.QtdItemNecFinal || 0) > 0;
+        const precisaDevolucao = item.devolucaoEstoque && item.devolucaoEstoque.qtde > 0;
+        
+        return {
+            separacaoRealizada: estado.separacaoRealizada,
+            devolucaoRealizada: estado.devolucaoRealizada,
+            precisaSeparacao,
+            precisaDevolucao
+        };
+    }
+
     /**
      * Mostrar loading overlay
      */

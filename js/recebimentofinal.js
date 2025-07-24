@@ -526,8 +526,8 @@ class RecebimentoFinalManager {
                     statusItem: item.statusItem
                 });
 
-                // 🔧 FILTRO: Só aceitar itens com status "Aguardando Recebimento Final"
-                if (item.statusItem !== 'Aguardando Recebimento Final') {
+                // 🔧 FILTRO: Aceitar itens com status "Aguardando Recebimento Final" OU "Recebimento Parcial"
+                if (item.statusItem !== 'Aguardando Recebimento Final' && item.statusItem !== 'Recebimento Parcial') {
                     console.log(`⏭️ Item ${item.codigo} - Ignorado (status: ${item.statusItem})`);
                     continue;
                 }
@@ -697,7 +697,7 @@ class RecebimentoFinalManager {
                     .limit(1000)
                     .get();
                     
-                console.log(`📊 Encontrados ${snapshot.size} itens com status 'Aguardando Recebimento Final'`);
+                console.log(`📊 Encontrados ${snapshot.size} itens com historicoCompraFinal`);
                 
                 for (const doc of snapshot.docs) {
                     const item = doc.data();
@@ -1068,6 +1068,7 @@ class RecebimentoFinalManager {
             novoStatus = 'Recebido Completo';
         } else {
             novoStatus = 'Recebimento Parcial';
+            console.log(`🔄 Processando Recebimento Parcial para item ${item.codigo}: restante ${novaQtdePendente}`);
         }
 
         // Criar entrada do histórico
@@ -1083,11 +1084,17 @@ class RecebimentoFinalManager {
         // Preparar atualização
         const docRef = this.db.collection('itens').doc(item.id);
         const updateData = {
-            qtdePendenteRecebimento: Math.max(0, novaQtdePendente),
+            qtdePendenteRecebimento: novaQtdePendente,
             statusItem: novoStatus,
             ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp(),
             historicoRecebimentos: firebase.firestore.FieldValue.arrayUnion(historicoRecebimento)
         };
+        
+        // Garantir que o status está correto para recebimento parcial
+        if (novaQtdePendente > 0) {
+            console.log(`✅ Confirmando status de Recebimento Parcial para o item ${item.codigo || item.id}`);
+            updateData.statusItem = 'Recebimento Parcial';
+        }
 
         batch.update(docRef, updateData);
     }

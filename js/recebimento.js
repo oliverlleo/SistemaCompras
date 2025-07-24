@@ -429,6 +429,19 @@ class RecebimentoManager {
             await this.carregarItensCompraInicial();
 
             console.log(`✅ Total de itens carregados: ${this.itensPendentes.length}`);
+            
+            // Verificar se há itens com recebimento parcial para debug
+            const itensRecebimentoParcial = this.itensPendentes.filter(
+                item => item.statusItem === 'Recebimento Parcial'
+            );
+            
+            console.log(`🔍 Itens com status "Recebimento Parcial" encontrados: ${itensRecebimentoParcial.length}`);
+            if (itensRecebimentoParcial.length > 0) {
+                itensRecebimentoParcial.forEach(item => {
+                    console.log(`  - Item ${item.codigo}: pendente=${item.qtdePendenteRecebimento}, status=${item.statusItem}`);
+                });
+            }
+            
             this.aplicarFiltros();
             this.esconderLoading();
 
@@ -476,10 +489,28 @@ class RecebimentoManager {
             
             // Quantidade pendente = quantidade comprada - quantidade já recebida
             qtdePendente = item.qtdeComprada - qtdeRecebida;
+            
+            // Garantir que a quantidade pendente nunca seja negativa
+            qtdePendente = Math.max(0, qtdePendente);
             console.log(`📦 Item ${item.codigo || doc.id} - Qtde pendente (calculada): ${qtdePendente} (comprada: ${item.qtdeComprada}, recebida: ${qtdeRecebida})`);
             
-            // Se já foi totalmente recebido, ignorar item
-            if (qtdePendente <= 0) {
+            // IMPORTANTE: Verificar primeiro o status de Recebimento Parcial
+            const isRecebimentoParcial = item.statusItem === 'Recebimento Parcial';
+            
+            // Se o item tiver status de Recebimento Parcial, incluí-lo mesmo que a qtde pendente seja 0
+            // porque pode ter sido um cálculo incorreto anteriormente
+            if (isRecebimentoParcial) {
+                console.log(`⚠️ Item ${item.codigo || doc.id} - Tem status de Recebimento Parcial e será incluído na lista independentemente da quantidade`);
+                
+                // Forçar uma quantidade pendente mínima para garantir que será exibido
+                // Se a quantidade calculada for 0 mas o status for Recebimento Parcial, algo está errado
+                if (qtdePendente <= 0) {
+                    qtdePendente = item.qtdeComprada * 0.1; // 10% da quantidade original
+                    console.log(`⚠️ Corrigindo item ${item.codigo}: Qtde pendente forçada para ${qtdePendente} já que é um recebimento parcial`);
+                }
+            }
+            // Se não for recebimento parcial e não tiver quantidade pendente, pular
+            else if (qtdePendente <= 0) {
                 console.log(`✅ Item ${item.codigo || doc.id} - Totalmente recebido, não incluir na lista`);
                 continue;
             }
@@ -501,15 +532,28 @@ class RecebimentoManager {
                         console.warn('Erro ao buscar dados do pedido:', error);
                     }
                 }
+                
+                // Garantir que o status está correto se for recebimento parcial
+                const statusItem = item.statusItem === 'Recebimento Parcial' ? 'Recebimento Parcial' : item.statusItem;
 
-                this.itensPendentes.push({
+                const itemParaAdicionar = {
                     id: doc.id,
                     ...item,
                     qtdePendenteRecebimento: qtdePendente,
                     clienteNome,
                     tipoProjeto,
-                    tipoCompra: 'Compra Inicial' // Flag para identificar o tipo
-                });
+                    tipoCompra: 'Compra Inicial', // Flag para identificar o tipo
+                    statusItem: item.statusItem // Garantir que o status está correto
+                };
+                
+                // Se for recebimento parcial, registrar explicitamente
+                if (item.statusItem === 'Recebimento Parcial') {
+                    console.log(`⚠️ Adicionando item ${item.codigo || doc.id} com status RECEBIMENTO PARCIAL`);
+                    console.log(`   Quantidade pendente: ${qtdePendente}, Quantidade total: ${item.qtdeComprada}`);
+                    itemParaAdicionar.statusItem = 'Recebimento Parcial';
+                }
+                
+                this.itensPendentes.push(itemParaAdicionar);
                 
                 console.log(`✅ Item ${item.codigo || doc.id} adicionado à lista (compra inicial)`);
             } else {
@@ -918,8 +962,13 @@ class RecebimentoManager {
             const hoje = new Date().toISOString().split('T')[0];
             const isAtrasado = item.prazoEntrega < hoje;
             const isHoje = item.prazoEntrega === hoje;
+            const isRecebimentoParcial = item.statusItem === 'Recebimento Parcial';
             
-            if (isAtrasado) {
+            // Adicionar destaque para recebimento parcial
+            if (isRecebimentoParcial) {
+                tr.className = 'hover:bg-green-50 bg-green-100';
+                console.log(`🟢 Renderizando item ${item.codigo} com status Recebimento Parcial`);
+            } else if (isAtrasado) {
                 tr.className = 'hover:bg-red-50 bg-red-25';
             } else if (isHoje) {
                 tr.className = 'hover:bg-yellow-50 bg-yellow-25';
@@ -929,6 +978,11 @@ class RecebimentoManager {
 
             // Definir cor do badge do tipo de compra - só compra inicial
             const tipoCompraClass = 'bg-blue-100 text-blue-800';
+            
+            // Adicionar status ao item na tabela
+            const statusLabel = item.statusItem === 'Recebimento Parcial' ? 
+                `<span class="inline-block ml-2 bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full text-xs font-medium">Parcial</span>` : 
+                '';
 
             tr.innerHTML = `
                 <td class="px-4 py-3">
@@ -950,6 +1004,7 @@ class RecebimentoManager {
                 </td>
                 <td class="px-4 py-3 text-sm font-semibold text-gray-900">
                     ${this.formatarQuantidade(item.qtdePendenteRecebimento)}
+                    ${isRecebimentoParcial ? '<span class="ml-2 inline-block bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full text-xs font-medium">Parcial</span>' : ''}
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-700">
                     ${item.fornecedor || 'N/A'}
@@ -1145,10 +1200,24 @@ class RecebimentoManager {
                     alert(`Quantidade inválida para o item ${item.codigo}`);
                     return;
                 }
+                
+                // Verificar se é recebimento parcial
+                const isRecebimentoParcial = qtdRecebida < item.qtdePendenteRecebimento;
+                if (isRecebimentoParcial) {
+                    console.log(`🔶 ATENÇÃO: Recebimento parcial detectado para o item ${item.codigo}`);
+                    console.log(`Quantidade pendente: ${item.qtdePendenteRecebimento}, Quantidade recebida: ${qtdRecebida}, Restante: ${item.qtdePendenteRecebimento - qtdRecebida}`);
+                    
+                    // Alerta para o usuário sobre recebimento parcial
+                    if (!window.recebimentoParcialAlertado) {
+                        alert(`Atenção: O item ${item.codigo} terá um recebimento parcial. Após salvar, ele continuará visível na lista com a quantidade restante.`);
+                        window.recebimentoParcialAlertado = true;
+                    }
+                }
 
                 recebimentos.push({
                     item,
-                    qtdRecebida
+                    qtdRecebida,
+                    isRecebimentoParcial
                 });
             }
 
@@ -1174,6 +1243,10 @@ class RecebimentoManager {
                 } else {
                     novoStatus = 'Recebimento Parcial';
                 }
+                
+                // Log para debug do status de recebimento parcial
+                console.log(`Status do item ${item.codigo}: ${novoStatus}`);
+                console.log(`Quantidade pendente anterior: ${item.qtdePendenteRecebimento}, Recebida: ${qtdRecebida}, Nova pendente: ${novaQtdePendente}`);
 
                 // Criar entrada do histórico com flag de tipo de recebimento
                 const historicoRecebimento = {
@@ -1182,19 +1255,45 @@ class RecebimentoManager {
                     qtde: qtdRecebida,
                     status: novoStatus,
                     qtdePendenteAnterior: item.qtdePendenteRecebimento,
-                    qtdePendenteNova: Math.max(0, novaQtdePendente),
+                    qtdePendenteNova: novaQtdePendente,
                     tipoRecebimento: item.tipoCompra, // Flag para identificar se é recebimento de compra inicial ou final
                     dataRecebimento: dataRecebimento
                 };
 
                 // Preparar atualização
                 const docRef = this.db.collection('itens').doc(item.id);
+                
+                // CORREÇÃO CRÍTICA: Verificar se o recebimento é realmente completo ou parcial
+                // baseado na quantidade recebida vs. quantidade pendente
+                let recebimentoCompleto = qtdRecebida >= item.qtdePendenteRecebimento;
+                
+                // Novo status baseado na análise correta
+                let novoStatusFinal = novoStatus;
+                if (recebimentoCompleto) {
+                    novoStatusFinal = 'Recebido Completo';
+                    console.log(`✅ Item ${item.codigo} - Recebimento COMPLETO - Qtd recebida: ${qtdRecebida}, Qtd pendente: ${item.qtdePendenteRecebimento}`);
+                } else {
+                    novoStatusFinal = 'Recebimento Parcial';
+                    console.log(`🔶 Item ${item.codigo} - Recebimento PARCIAL - Qtd recebida: ${qtdRecebida}, Qtd pendente: ${item.qtdePendenteRecebimento}, Restante: ${novaQtdePendente}`);
+                }
+
                 const updateData = {
                     qtdePendenteRecebimento: Math.max(0, novaQtdePendente),
-                    statusItem: novoStatus,
+                    statusItem: novoStatusFinal,
                     ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp(),
                     historicoRecebimentos: firebase.firestore.FieldValue.arrayUnion(historicoRecebimento)
                 };
+
+                // Garantir que items com recebimento parcial tenham quantidade pendente
+                if (novoStatusFinal === 'Recebimento Parcial' && novaQtdePendente <= 0) {
+                    // Caso a qtde pendente tenha sido calculada incorretamente, forçar um valor
+                    updateData.qtdePendenteRecebimento = item.qtdePendenteRecebimento - qtdRecebida;
+                    if (updateData.qtdePendenteRecebimento <= 0) {
+                        // Último caso: forçar um valor mínimo
+                        updateData.qtdePendenteRecebimento = 1;
+                    }
+                    console.log(`⚠️ CORREÇÃO: Forçando quantidade pendente para ${updateData.qtdePendenteRecebimento} no item ${item.codigo}`);
+                }
 
                 batch.update(docRef, updateData);
             }
@@ -1203,9 +1302,32 @@ class RecebimentoManager {
 
             // Feedback e limpeza
             this.esconderLoading();
-            alert(`Recebimento registrado com sucesso! ${recebimentos.length} itens processados.`);
+            
+            // Log para verificar os itens após o processamento
+            console.log('Recebimento concluído, verificando resultados:');
+            let temRecebimentoParcial = false;
+            for (const recebimento of recebimentos) {
+                const { item, qtdRecebida, isRecebimentoParcial } = recebimento;
+                const novaQtde = Math.max(0, item.qtdePendenteRecebimento - qtdRecebida);
+                console.log(`Item ${item.codigo}: ${novaQtde === 0 ? 'Completo' : 'Parcial (restante: ' + novaQtde + ')'}`);
+                
+                // Verificar se tem algum recebimento parcial
+                if (isRecebimentoParcial || novaQtde > 0) {
+                    temRecebimentoParcial = true;
+                }
+            }
+            
+            // Feedback diferenciado para recebimento parcial
+            if (temRecebimentoParcial) {
+                alert(`Recebimento parcial registrado com sucesso! ${recebimentos.length} itens processados. Os itens com recebimento parcial permanecerão na lista para futuro recebimento.`);
+            } else {
+                alert(`Recebimento registrado com sucesso! ${recebimentos.length} itens processados.`);
+            }
             
             this.fecharModalRecebimento();
+            
+            // Recarregar dados e garantir que os itens com recebimento parcial sejam exibidos
+            window.recebimentoParcialAlertado = false; // Reset do alerta
             await this.carregarItensPendentes();
 
         } catch (error) {

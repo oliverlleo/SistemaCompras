@@ -2,8 +2,8 @@
 class UIManager {
   constructor() {
     this.materialCategories = {
-      'PVC': ['Perfil', 'Reforço', 'Aço', 'Ferragens', 'Vidros', 'Vedação', 'Tela Retrátil'],
-      'Alumínio': ['Perfil', 'Acessórios', 'Ferragens', 'Vidros', 'Vedação'],
+      'PVC': ['Perfil', 'Reforço', 'Aço', 'Ferragens', 'Vidros', 'Esteira', 'Tela Retrátil', 'Motor'],
+      'Alumínio': ['Perfil', 'Acessórios', 'Ferragens', 'Vidros', 'Esteira', 'Motor'],
       'Brise': ['Perfil', 'Lâminas', 'Ferragens', 'Acessórios'],
       'ACM': ['Placas ACM', 'Perfis', 'Fixação', 'Acessórios'],
       'Outros': ['Materiais Diversos']
@@ -271,12 +271,23 @@ class UIManager {
       </div>
     `;
     
-    // Adicionar evento ao botão
+    // Adicionar evento ao botão e Enter key
     setTimeout(() => {
       const addButton = document.getElementById(`${prefix}add-custom-category`);
+      const inputField = document.getElementById(`${prefix}custom-category-name`);
+      
       if (addButton) {
         addButton.addEventListener('click', () => {
           this.addCustomCategory(isModal);
+        });
+      }
+      
+      if (inputField) {
+        inputField.addEventListener('keypress', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            this.addCustomCategory(isModal);
+          }
         });
       }
     }, 100);

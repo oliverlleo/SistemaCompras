@@ -37,12 +37,12 @@
     <div class="container">
         <div class="header">
             <h1>📁 Sistema 100% Completo e Atualizado</h1>
-            <p>Visualizador de Código - Sistema de Gerenciamento de Pedidos v5.5</p>
+            <p>Visualizador de Código - Sistema de Gerenciamento de Pedidos v5.6</p>
         </div>
 
         <div class="status-banner">
-            <h2 style="margin: 0 0 10px 0; font-size: 1.5rem;">🚀 Sistema v5.5 - Recebimento Parcial Otimizado!</h2>
-            <p style="margin: 0; font-size: 1rem;">Sistema de recebimento final agora aceita itens com status "Recebimento Parcial" - bug de filtro corrigido e tudo funcionando perfeitamente!</p>
+            <h2 style="margin: 0 0 10px 0; font-size: 1.5rem;">🚀 Sistema v5.6 - Atualização de Listas de Materiais!</h2>
+            <p style="margin: 0; font-size: 1rem;">Listas atualizadas: "Vedação" agora é "Esteira", adicionada "Motor" para todos os projetos com esteira, e corrigido o problema de confirmação ao adicionar nova lista!</p>
         </div>
 
         <div class="download-section">
@@ -55,15 +55,15 @@
                 Download Sistema Completo (.zip)
             </button>
             <div style="margin-top: 20px; font-size: 0.9rem; color: #64748b;">
-                <strong>30 arquivos</strong> • <strong>Versão 5.5</strong> • <strong>100% Funcional</strong> • <strong>Recebimento Parcial Corrigido</strong>
+                <strong>30 arquivos</strong> • <strong>Versão 5.6</strong> • <strong>100% Funcional</strong> • <strong>Listas de Materiais Atualizadas</strong>
             </div>
         </div>
 
         <div class="features">
             <div class="feature">
                 <div class="feature-icon">🔧</div>
-                <h3>Recebimento Parcial - CORRIGIDO</h3>
-                <p>Sistema de recebimento final agora aceita itens com status "Recebimento Parcial" - filtro otimizado e funcionando</p>
+                <h3>Listas de Materiais - ATUALIZADAS</h3>
+                <p>Listas de materiais atualizadas: "Vedação" substituído por "Esteira", adicionado "Motor" para projetos com esteira, e corrigido problema no formulário</p>
             </div>
             <div class="feature">
                 <div class="feature-icon">📦</div>
@@ -129,10 +129,10 @@
                     <div class="file-item">🏪 <span>js/gestao-compras.js</span> <span class="check-icon">✅</span></div>
                     <div class="file-item">🚀 <span>js/main.js</span> <span class="check-icon">✅</span></div>
                     <div class="file-item">📦 <span>js/recebimento.js</span> <span class="check-icon">✅</span></div>
-                    <div class="file-item">📦 <span>js/recebimentofinal.js</span> <span class="check-icon">🔥 ATUALIZADO</span></div>
+                    <div class="file-item">📦 <span>js/recebimentofinal.js</span> <span class="check-icon">✅</span></div>
                     <div class="file-item">🔧 <span>js/separacao-producao.js</span> <span class="check-icon">✅</span></div>
                     <div class="file-item">⚙️ <span>js/tratamento-empenho.js</span> <span class="check-icon">✅</span></div>
-                    <div class="file-item">🎯 <span>js/ui-manager.js</span> <span class="check-icon">✅</span></div>
+                    <div class="file-item">🎯 <span>js/ui-manager.js</span> <span class="check-icon">🔥 ATUALIZADO</span></div>
                 </div>
 
                 <div class="file-category">
@@ -215,7 +215,7 @@
                 const content = await zip.generateAsync({ type: 'blob' });
                 
                 // Download
-                saveAs(content, 'sistema-gerenciamento-pedidos-completo-v5.5.zip');
+                saveAs(content, 'sistema-gerenciamento-pedidos-completo-v5.6.zip');
                 
                 btn.innerHTML = '✅ Download concluído!';
                 setTimeout(() => {
@@ -234,9 +234,9 @@
         });
 
         // Log de inicialização
-        console.log('📋 Visualizador de código v5.5 carregado');
+        console.log('📋 Visualizador de código v5.6 carregado');
         console.log('📦 Total de arquivos no sistema:', allFiles.length);
-        console.log('🔥 Última atualização: Correção do filtro de recebimento parcial');
+        console.log('🔥 Última atualização: Atualização das listas de materiais e correção do formulário');
         console.log('✅ Sistema 100% funcional e atualizado');
     </script>
 </body>

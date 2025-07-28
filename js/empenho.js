@@ -9,14 +9,23 @@ class SistemaEmpenho {
         this.selectCliente = document.getElementById('selectCliente');
         this.selectProjeto = document.getElementById('selectProjeto');
         this.selectLista = document.getElementById('selectLista');
+        this.selectStatusFilter = document.getElementById('selectStatusFilter');
         this.tabelaItensBody = document.getElementById('tabelaItensBody');
         this.btnEmpenhar = document.getElementById('btnEmpenhar');
+        this.btnVerEmpenhados = document.getElementById('btnVerEmpenhados');
         this.selectAll = document.getElementById('selectAll');
+        
+        // Modal de Empenho
         this.modalEmpenho = document.getElementById('modalEmpenho');
         this.modalTitle = document.getElementById('modalTitle');
         this.tabelaModalBody = document.getElementById('tabelaModalBody');
         this.btnSalvar = document.getElementById('btnSalvar');
         this.btnCancelar = document.getElementById('btnCancelar');
+        
+        // Modal de Itens Empenhados
+        this.modalEmpenhados = document.getElementById('modalEmpenhados');
+        this.tabelaEmpenhadosBody = document.getElementById('tabelaEmpenhadosBody');
+        this.btnFecharEmpenhados = document.getElementById('btnFecharEmpenhados');
 
         // Estado da aplicação
         this.pedidosMap = new Map(); // Armazena dados dos pedidos por ID
@@ -49,21 +58,44 @@ class SistemaEmpenho {
         this.selectCliente.addEventListener('change', () => this.onClienteChange());
         this.selectProjeto.addEventListener('change', () => this.onProjetoChange());
         this.selectLista.addEventListener('change', () => this.onListaChange());
+        
+        // Filtro de status - recarregar todos os filtros quando mudar
+        this.selectStatusFilter.addEventListener('change', () => {
+            // Recarregar todos os filtros com base no novo status selecionado
+            this.populateClientesFilter();
+            
+            // Se cliente selecionado, recarregar projeto e lista
+            if (this.selectCliente.value) {
+                this.onClienteChange();
+            } else {
+                this.limparTabela();
+            }
+        });
 
         // Checkbox "Selecionar Todos"
         this.selectAll.addEventListener('change', () => this.onSelectAllChange());
 
-        // Botão principal de empenho
+        // Botões de ação
         this.btnEmpenhar.addEventListener('click', () => this.abrirModal());
+        this.btnVerEmpenhados.addEventListener('click', () => this.abrirModalEmpenhados());
 
-        // Modal
+        // Modal de Empenho
         this.btnSalvar.addEventListener('click', () => this.handleSalvarEmpenho());
         this.btnCancelar.addEventListener('click', () => this.fecharModal());
+        
+        // Modal de Itens Empenhados
+        this.btnFecharEmpenhados.addEventListener('click', () => this.fecharModalEmpenhados());
 
-        // Fechar modal ao clicar fora
+        // Fechar modals ao clicar fora
         this.modalEmpenho.addEventListener('click', (e) => {
             if (e.target === this.modalEmpenho) {
                 this.fecharModal();
+            }
+        });
+        
+        this.modalEmpenhados.addEventListener('click', (e) => {
+            if (e.target === this.modalEmpenhados) {
+                this.fecharModalEmpenhados();
             }
         });
     }
@@ -86,11 +118,9 @@ class SistemaEmpenho {
 
             console.log(`${this.pedidosMap.size} pedidos carregados`);
 
-            // Passo 2: Buscar TODOS os Itens Relevantes (excluindo itens já empenhados, separados e para compra)
+            // Passo 2: Buscar TODOS os Itens
             console.log('Carregando itens...');
-            const itensSnapshot = await db.collection('itens')
-                .where('statusItem', 'not-in', ['Empenhado', 'Separado para Produção', 'Para Compra'])
-                .get();
+            const itensSnapshot = await db.collection('itens').get();
 
             // Passo 3: Enriquecer os Itens com dados do pedido pai
             this.itensEnriquecidos = itensSnapshot.docs.map(doc => {
@@ -109,7 +139,10 @@ class SistemaEmpenho {
 
             console.log(`${this.itensEnriquecidos.length} itens carregados e enriquecidos`);
 
-            // Passo 4: Popular primeiro filtro
+            // Definir o valor padrão do filtro de status (pode ser necessário salvar/restaurar da preferência do usuário)
+            this.selectStatusFilter.value = 'todos';
+
+            // Passo 4: Popular primeiro filtro considerando o filtro de status
             this.populateClientesFilter();
 
         } catch (error) {
@@ -121,17 +154,33 @@ class SistemaEmpenho {
     }
 
     /**
-     * Popular dropdown de clientes
+     * Popular dropdown de clientes com cores por status
      */
     populateClientesFilter() {
         const clientes = [...new Set(this.itensEnriquecidos.map(item => item.clienteNome))].sort();
+        const statusFilter = this.selectStatusFilter.value;
         
         this.selectCliente.innerHTML = '<option value="">Selecione um Cliente</option>';
         
         clientes.forEach(cliente => {
+            // Verificar se devemos ocultar este cliente por causa do filtro
+            const statusCliente = this.calcularStatusCliente(cliente);
+            if (statusFilter === 'ocultar-empenhadas' && statusCliente === 'empenhado') {
+                // Não adicionar ao dropdown se o cliente estiver totalmente empenhado e o filtro estiver ativo
+                return;
+            }
+            
             const option = document.createElement('option');
             option.value = cliente;
             option.textContent = cliente;
+            
+            // Aplicar cor baseada no status do cliente
+            if (statusCliente === 'empenhado') {
+                option.classList.add('cliente-empenhado');
+            } else if (statusCliente === 'parcial') {
+                option.classList.add('cliente-parcial');
+            }
+            
             this.selectCliente.appendChild(option);
         });
     }
@@ -159,10 +208,27 @@ class SistemaEmpenho {
         this.selectProjeto.innerHTML = '<option value="">Selecione um Projeto</option>';
         this.selectProjeto.disabled = false;
 
+        const statusFilter = this.selectStatusFilter.value;
+        
         projetosDisponiveis.forEach(projeto => {
+            // Verificar se devemos ocultar este projeto por causa do filtro
+            const statusProjeto = this.calcularStatusProjeto(clienteSelecionado, projeto);
+            if (statusFilter === 'ocultar-empenhadas' && statusProjeto === 'empenhado') {
+                // Não adicionar ao dropdown se o projeto estiver totalmente empenhado e o filtro estiver ativo
+                return;
+            }
+            
             const option = document.createElement('option');
             option.value = projeto;
             option.textContent = projeto;
+            
+            // Aplicar cor baseada no status do projeto
+            if (statusProjeto === 'empenhado') {
+                option.classList.add('projeto-empenhado');
+            } else if (statusProjeto === 'parcial') {
+                option.classList.add('projeto-parcial');
+            }
+            
             this.selectProjeto.appendChild(option);
         });
     }
@@ -193,10 +259,27 @@ class SistemaEmpenho {
         this.selectLista.innerHTML = '<option value="">Selecione uma Lista</option>';
         this.selectLista.disabled = false;
 
+        const statusFilter = this.selectStatusFilter.value;
+        
         listasDisponiveis.forEach(lista => {
+            // Verificar se devemos ocultar esta lista por causa do filtro
+            const statusLista = this.calcularStatusLista(clienteSelecionado, projetoSelecionado, lista);
+            if (statusFilter === 'ocultar-empenhadas' && statusLista === 'empenhado') {
+                // Não adicionar ao dropdown se a lista estiver totalmente empenhada e o filtro estiver ativo
+                return;
+            }
+            
             const option = document.createElement('option');
             option.value = lista;
             option.textContent = lista;
+            
+            // Aplicar cor baseada no status da lista
+            if (statusLista === 'empenhado') {
+                option.classList.add('lista-empenhada');
+            } else if (statusLista === 'parcial') {
+                option.classList.add('lista-parcial');
+            }
+            
             this.selectLista.appendChild(option);
         });
     }
@@ -222,13 +305,23 @@ class SistemaEmpenho {
         const clienteSelecionado = this.selectCliente.value;
         const projetoSelecionado = this.selectProjeto.value;
         const listaSelecionada = this.selectLista.value;
+        const statusFilter = this.selectStatusFilter.value;
 
         // Filtrar itens finais
-        const itensParaRenderizar = this.itensEnriquecidos.filter(item =>
+        let itensParaRenderizar = this.itensEnriquecidos.filter(item =>
             item.clienteNome === clienteSelecionado &&
             item.tipoProjeto === projetoSelecionado &&
             item.listaMaterial === listaSelecionada
         );
+
+        // Aplicar filtro de status
+        if (statusFilter === 'ocultar-empenhadas') {
+            itensParaRenderizar = itensParaRenderizar.filter(item => {
+                const saldos = this.calcularSaldos(item);
+                const qtdNecessaria = item.quantidade || item.QtdItemNecFinal || 0;
+                return saldos.totalEmpenhado < qtdNecessaria; // Inclui apenas parciais e não empenhadas, oculta totalmente empenhadas
+            });
+        }
 
         // Atualizar botão de empenhar
         this.updateBotaoEmpenhar();
@@ -250,6 +343,12 @@ class SistemaEmpenho {
         
         itensParaRenderizar.forEach(item => {
             const saldos = this.calcularSaldos(item);
+            const qtdNecessaria = item.quantidade || item.QtdItemNecFinal || 0;
+            
+            // Verificar se já está totalmente empenhado quando o filtro estiver ativo
+            if (statusFilter === 'ocultar-empenhadas' && saldos.totalEmpenhado >= qtdNecessaria) {
+                return; // Pula itens totalmente empenhados quando o filtro estiver ativo
+            }
             
             // Só renderizar se houver saldo disponível em Estoque OU em Recebido
             if (saldos.saldoDisponivelEstoque > 0 || saldos.saldoDisponivelRecebido > 0) {
@@ -635,14 +734,160 @@ class SistemaEmpenho {
     }
 
     /**
-     * Fechar modal
+     * Fechar modal de empenho
      */
     fecharModal() {
         this.modalEmpenho.style.display = 'none';
         this.tabelaModalBody.innerHTML = '';
         // Não limpar seleções ao fechar o modal
     }
+    
+    /**
+     * Abrir modal de itens empenhados
+     */
+    abrirModalEmpenhados() {
+        this.renderTabelaEmpenhados();
+        this.modalEmpenhados.style.display = 'flex';
+    }
+    
+    /**
+     * Fechar modal de itens empenhados
+     */
+    fecharModalEmpenhados() {
+        this.modalEmpenhados.style.display = 'none';
+        this.tabelaEmpenhadosBody.innerHTML = '';
+    }
+    
+    /**
+     * Renderizar tabela de itens empenhados
+     */
+    renderTabelaEmpenhados() {
+        const clienteSelecionado = this.selectCliente.value;
+        const projetoSelecionado = this.selectProjeto.value;
+        const listaSelecionada = this.selectLista.value;
+        
+        // Filtrar apenas itens que têm histórico de empenho
+        let itensEmpenhados = this.itensEnriquecidos.filter(item => {
+            const historicoEmpenhos = item.historicoEmpenhos || [];
+            return historicoEmpenhos.length > 0;
+        });
+        
+        // Aplicar filtros se selecionados
+        if (clienteSelecionado) {
+            itensEmpenhados = itensEmpenhados.filter(item => item.clienteNome === clienteSelecionado);
+            
+            if (projetoSelecionado) {
+                itensEmpenhados = itensEmpenhados.filter(item => item.tipoProjeto === projetoSelecionado);
+                
+                if (listaSelecionada) {
+                    itensEmpenhados = itensEmpenhados.filter(item => item.listaMaterial === listaSelecionada);
+                }
+            }
+        }
+        
+        // Se não houver itens empenhados
+        if (itensEmpenhados.length === 0) {
+            this.tabelaEmpenhadosBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="empty-state">
+                        <h3>Nenhum item empenhado</h3>
+                        <p>Não há itens empenhados para os filtros selecionados.</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        // Construir linhas da tabela
+        const linhas = itensEmpenhados.map(item => {
+            const saldos = this.calcularSaldos(item);
+            const qtdNecessaria = item.quantidade || item.QtdItemNecFinal || 0;
+            
+            return `
+                <tr>
+                    <td>${item.codigo || '-'}</td>
+                    <td>${item.descricao || '-'}</td>
+                    <td>${qtdNecessaria}</td>
+                    <td>${saldos.totalEmpenhado}</td>
+                    <td>
+                        <button class="btn-empenhar-linha btn-desfazer-empenho" data-item-id="${item.id}">
+                            Desfazer Empenho
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        this.tabelaEmpenhadosBody.innerHTML = linhas.join('');
+        
+        // Adicionar event listeners para os botões de desfazer
+        document.querySelectorAll('.btn-desfazer-empenho').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const itemId = e.target.dataset.itemId;
+                this.handleDesfazerEmpenho(itemId);
+            });
+        });
+    }
 
+    /**
+     * Desfazer empenho de um item
+     */
+    async handleDesfazerEmpenho(itemId) {
+        if (this.isLoading) return;
+        
+        try {
+            this.isLoading = true;
+            
+            // Buscar o item
+            const item = this.itensEnriquecidos.find(i => i.id === itemId);
+            if (!item) {
+                this.showToast('Item não encontrado', 'error');
+                return;
+            }
+            
+            // Confirmar antes de desfazer
+            if (!confirm(`Tem certeza que deseja desfazer o empenho do item ${item.codigo || itemId}?`)) {
+                return;
+            }
+            
+            // Iniciar transação no Firestore
+            const batch = db.batch();
+            const itemRef = db.collection('itens').doc(itemId);
+            
+            // Remover o histórico de empenho (zerando-o)
+            batch.update(itemRef, {
+                historicoEmpenhos: [],
+                statusItem: 'Disponível', // Voltar para status disponível
+                ultimaAtualizacao: new Date()
+            });
+            
+            // Executar batch
+            await batch.commit();
+            
+            // Atualizar os dados localmente
+            item.historicoEmpenhos = [];
+            item.statusItem = 'Disponível';
+            item.ultimaAtualizacao = new Date();
+            
+            // Mostrar mensagem de sucesso
+            this.showToast('Empenho desfeito com sucesso', 'success');
+            
+            // Recarregar tabela de empenhados
+            this.renderTabelaEmpenhados();
+            
+            // Se a lista correspondente estiver sendo exibida, recarregar também
+            if (this.selectLista.value === item.listaMaterial) {
+                this.renderTabelaEmpenho();
+            }
+            
+        } catch (error) {
+            console.error('Erro ao desfazer empenho:', error);
+            this.showToast('Erro ao desfazer empenho', 'error');
+        } finally {
+            this.isLoading = false;
+        }
+    }
+    
     /**
      * Salvar empenho
      */
@@ -903,6 +1148,114 @@ class SistemaEmpenho {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
         }, 5000);
+    }
+
+    /**
+     * Calcular status de empenho para um cliente
+     */
+    calcularStatusCliente(cliente) {
+        const itensCliente = this.itensEnriquecidos.filter(item => item.clienteNome === cliente);
+        
+        if (itensCliente.length === 0) return 'normal';
+
+        let totalItens = 0;
+        let itensEmpenhados = 0;
+        let itensParciaisOuEmpenhados = 0;
+
+        itensCliente.forEach(item => {
+            const saldos = this.calcularSaldos(item);
+            const qtdNecessaria = item.quantidade || item.QtdItemNecFinal || 0;
+            
+            totalItens++;
+            
+            if (saldos.totalEmpenhado >= qtdNecessaria) {
+                itensEmpenhados++;
+                itensParciaisOuEmpenhados++;
+            } else if (saldos.totalEmpenhado > 0) {
+                itensParciaisOuEmpenhados++;
+            }
+        });
+
+        if (itensEmpenhados === totalItens) {
+            return 'empenhado'; // Todos empenhados
+        } else if (itensParciaisOuEmpenhados > 0) {
+            return 'parcial'; // Alguns empenhados ou parciais
+        }
+        return 'normal'; // Nenhum empenhado
+    }
+
+    /**
+     * Calcular status de empenho para um projeto
+     */
+    calcularStatusProjeto(cliente, projeto) {
+        const itensProjeto = this.itensEnriquecidos.filter(item => 
+            item.clienteNome === cliente && item.tipoProjeto === projeto
+        );
+        
+        if (itensProjeto.length === 0) return 'normal';
+
+        let totalItens = 0;
+        let itensEmpenhados = 0;
+        let itensParciaisOuEmpenhados = 0;
+
+        itensProjeto.forEach(item => {
+            const saldos = this.calcularSaldos(item);
+            const qtdNecessaria = item.quantidade || item.QtdItemNecFinal || 0;
+            
+            totalItens++;
+            
+            if (saldos.totalEmpenhado >= qtdNecessaria) {
+                itensEmpenhados++;
+                itensParciaisOuEmpenhados++;
+            } else if (saldos.totalEmpenhado > 0) {
+                itensParciaisOuEmpenhados++;
+            }
+        });
+
+        if (itensEmpenhados === totalItens) {
+            return 'empenhado'; // Todos empenhados
+        } else if (itensParciaisOuEmpenhados > 0) {
+            return 'parcial'; // Alguns empenhados ou parciais
+        }
+        return 'normal'; // Nenhum empenhado
+    }
+
+    /**
+     * Calcular status de empenho para uma lista de material
+     */
+    calcularStatusLista(cliente, projeto, lista) {
+        const itensLista = this.itensEnriquecidos.filter(item => 
+            item.clienteNome === cliente && 
+            item.tipoProjeto === projeto && 
+            item.listaMaterial === lista
+        );
+        
+        if (itensLista.length === 0) return 'normal';
+
+        let totalItens = 0;
+        let itensEmpenhados = 0;
+        let itensParciaisOuEmpenhados = 0;
+
+        itensLista.forEach(item => {
+            const saldos = this.calcularSaldos(item);
+            const qtdNecessaria = item.quantidade || item.QtdItemNecFinal || 0;
+            
+            totalItens++;
+            
+            if (saldos.totalEmpenhado >= qtdNecessaria) {
+                itensEmpenhados++;
+                itensParciaisOuEmpenhados++;
+            } else if (saldos.totalEmpenhado > 0) {
+                itensParciaisOuEmpenhados++;
+            }
+        });
+
+        if (itensEmpenhados === totalItens) {
+            return 'empenhado'; // Todos empenhados
+        } else if (itensParciaisOuEmpenhados > 0) {
+            return 'parcial'; // Alguns empenhados ou parciais
+        }
+        return 'normal'; // Nenhum empenhado
     }
 }
 

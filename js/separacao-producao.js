@@ -9,6 +9,7 @@ class SistemaSeparacaoProducao {
         this.selectCliente = document.getElementById('selectCliente');
         this.selectProjeto = document.getElementById('selectProjeto');
         this.selectLista = document.getElementById('selectLista');
+        this.selectStatusFilter = document.getElementById('selectStatusFilter'); // Novo filtro de status
         this.btnCarregarItens = document.getElementById('btnCarregarItens');
         
         // Aplicar estilo adequado aos selects
@@ -16,6 +17,7 @@ class SistemaSeparacaoProducao {
         this.selectCliente.className = selectStyle;
         this.selectProjeto.className = selectStyle;
         this.selectLista.className = selectStyle;
+        this.selectStatusFilter.className = selectStyle;
         
         // Elementos DOM - Tabela
         this.tabelaSection = document.getElementById('tabelaSection');
@@ -26,6 +28,8 @@ class SistemaSeparacaoProducao {
         // Elementos DOM - Ações em Massa
         this.btnSeparacaoEmMassa = document.getElementById('btnSeparacaoEmMassa');
         this.btnDevolucaoEmMassa = document.getElementById('btnDevolucaoEmMassa');
+        this.btnVerSeparados = document.getElementById('btnVerSeparados'); // Botão Ver Separados
+        this.btnVerDevolvidos = document.getElementById('btnVerDevolvidos'); // Botão Ver Devolvidos
         
         // Elementos DOM - Modal Separação
         this.modalSeparacao = document.getElementById('modalSeparacao');
@@ -40,6 +44,16 @@ class SistemaSeparacaoProducao {
         this.listaItensDevolucao = document.getElementById('listaItensDevolucao');
         this.btnCancelarDevolucao = document.getElementById('btnCancelarDevolucao');
         this.btnConfirmarDevolucao = document.getElementById('btnConfirmarDevolucao');
+        
+        // Elementos DOM - Modal Itens Separados
+        this.modalSeparados = document.getElementById('modalSeparados');
+        this.tabelaSeparadosBody = document.getElementById('tabelaSeparadosBody');
+        this.btnFecharSeparados = document.getElementById('btnFecharSeparados');
+        
+        // Elementos DOM - Modal Itens Devolvidos
+        this.modalDevolvidos = document.getElementById('modalDevolvidos');
+        this.tabelaDevolvidosBody = document.getElementById('tabelaDevolvidosBody');
+        this.btnFecharDevolvidos = document.getElementById('btnFecharDevolvidos');
         
         // Loading overlay
         this.loadingOverlay = document.getElementById('loadingOverlay');
@@ -82,12 +96,27 @@ class SistemaSeparacaoProducao {
         this.selectLista.addEventListener('change', () => this.onListaChange());
         this.btnCarregarItens.addEventListener('click', () => this.carregarItensParaSeparacao());
         
+        // Filtro de status - recarregar todos os filtros quando mudar
+        this.selectStatusFilter.addEventListener('change', () => {
+            // Recarregar todos os filtros com base no novo status selecionado
+            this.carregarClientesComItensParaSeparacao();
+            
+            // Se cliente selecionado, recarregar projeto e lista
+            if (this.selectCliente.value) {
+                this.onClienteChange();
+            } else {
+                this.limparTabelaParaSeparacao();
+            }
+        });
+        
         // Seleção de itens
         this.selectAll.addEventListener('change', () => this.onSelectAllChange());
         
         // Ações em massa
         this.btnSeparacaoEmMassa.addEventListener('click', () => this.abrirModalSeparacao());
         this.btnDevolucaoEmMassa.addEventListener('click', () => this.abrirModalDevolucao());
+        this.btnVerSeparados.addEventListener('click', () => this.abrirModalSeparados());
+        this.btnVerDevolvidos.addEventListener('click', () => this.abrirModalDevolvidos());
         
         // Modal Separação
         this.btnCancelarSeparacao.addEventListener('click', () => this.fecharModal(this.modalSeparacao));
@@ -97,10 +126,18 @@ class SistemaSeparacaoProducao {
         this.btnCancelarDevolucao.addEventListener('click', () => this.fecharModal(this.modalDevolucao));
         this.btnConfirmarDevolucao.addEventListener('click', () => this.confirmarDevolucaoEstoque());
         
+        // Modal Itens Separados
+        this.btnFecharSeparados.addEventListener('click', () => this.fecharModal(this.modalSeparados));
+        
+        // Modal Itens Devolvidos
+        this.btnFecharDevolvidos.addEventListener('click', () => this.fecharModal(this.modalDevolvidos));
+        
         // Fechar modais ao clicar fora
         window.addEventListener('click', (e) => {
             if (e.target === this.modalSeparacao) this.fecharModal(this.modalSeparacao);
             if (e.target === this.modalDevolucao) this.fecharModal(this.modalDevolucao);
+            if (e.target === this.modalSeparados) this.fecharModal(this.modalSeparados);
+            if (e.target === this.modalDevolvidos) this.fecharModal(this.modalDevolvidos);
         });
         
         // Fechar modais com ESC
@@ -108,13 +145,15 @@ class SistemaSeparacaoProducao {
             if (e.key === 'Escape') {
                 this.fecharModal(this.modalSeparacao);
                 this.fecharModal(this.modalDevolucao);
+                this.fecharModal(this.modalSeparados);
+                this.fecharModal(this.modalDevolvidos);
             }
         });
         
         // Fechar modais pelos botões X
         document.querySelectorAll('.close-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const modal = e.target.closest('.modal');
+                const modal = e.target.closest('div[id^="modal"]');
                 this.fecharModal(modal);
             });
         });
@@ -153,6 +192,7 @@ class SistemaSeparacaoProducao {
             
             // Buscar pedidos para obter informações de clientes
             const clientes = new Set();
+            const clienteInfos = new Map(); // Para armazenar informações sobre itens por cliente
             
             for (const pedidoId of pedidoIds) {
                 try {
@@ -162,6 +202,31 @@ class SistemaSeparacaoProducao {
                         const pedido = pedidoDoc.data();
                         if (pedido.clienteNome) {
                             clientes.add(pedido.clienteNome);
+                            
+                            // Buscar itens deste pedido
+                            const itensClienteSnapshot = await this.db.collection('itens')
+                                .where('pedidoId', '==', pedidoId)
+                                .get();
+                            
+                            itensClienteSnapshot.forEach(doc => {
+                                const item = doc.data();
+                                const clienteNome = pedido.clienteNome;
+                                
+                                if (!clienteInfos.has(clienteNome)) {
+                                    clienteInfos.set(clienteNome, {
+                                        totalItens: 0,
+                                        itensSeparados: 0
+                                    });
+                                }
+                                
+                                const info = clienteInfos.get(clienteNome);
+                                info.totalItens++;
+                                
+                                // Verificar se o item já foi separado para produção
+                                if (item.statusItem === 'Separado para Produção' || item.qtdProducao > 0) {
+                                    info.itensSeparados++;
+                                }
+                            });
                         }
                     }
                 } catch (err) {
@@ -172,10 +237,29 @@ class SistemaSeparacaoProducao {
             // Popular select de clientes
             this.selectCliente.innerHTML = '<option value="">Selecione um Cliente</option>';
             
+            // Verificar o filtro de status
+            const statusFilter = this.selectStatusFilter.value;
+            
             Array.from(clientes).sort().forEach(cliente => {
+                const info = clienteInfos.get(cliente) || { totalItens: 0, itensSeparados: 0 };
+                const statusCliente = this.calcularStatusCliente(cliente, info);
+                
+                // Se o filtro estiver ativo, não adicionar clientes totalmente separados
+                if (statusFilter === 'ocultar-separados' && statusCliente === 'separado') {
+                    return;
+                }
+                
                 const option = document.createElement('option');
                 option.value = cliente;
                 option.textContent = cliente;
+                
+                // Aplicar cor baseada no status
+                if (statusCliente === 'separado') {
+                    option.classList.add('cliente-separado');
+                } else if (statusCliente === 'parcial') {
+                    option.classList.add('cliente-parcial');
+                }
+                
                 this.selectCliente.appendChild(option);
             });
             
@@ -190,6 +274,21 @@ class SistemaSeparacaoProducao {
         } finally {
             this.hideLoading();
         }
+    }
+    
+    /**
+     * Calcular status de separação para um cliente
+     */
+    calcularStatusCliente(cliente, info) {
+        if (!info || info.totalItens === 0) return 'normal';
+        
+        if (info.itensSeparados === info.totalItens) {
+            return 'separado'; // Todos separados
+        } else if (info.itensSeparados > 0) {
+            return 'parcial'; // Alguns separados
+        }
+        
+        return 'normal'; // Nenhum separado
     }
     
     /**
@@ -228,6 +327,7 @@ class SistemaSeparacaoProducao {
             
             // Buscar projetos dos pedidos (sem filtrar por qtdNecessariaFinal para evitar índice composto)
             const projetos = new Set();
+            const projetoInfos = new Map(); // Para armazenar informações sobre itens por projeto
             
             for (const pedidoId of pedidoIds) {
                 try {
@@ -249,8 +349,35 @@ class SistemaSeparacaoProducao {
                             return temQuantidadeParaSeparar || temQuantidadeParaDevolver;
                         });
                         
-                        if (temItensParaSeparacao && pedido.tipoProjeto) {
+                        if (pedido.tipoProjeto) {
+                            // Adicionar projeto à lista
                             projetos.add(pedido.tipoProjeto);
+                            
+                            // Inicializar informações do projeto se necessário
+                            if (!projetoInfos.has(pedido.tipoProjeto)) {
+                                projetoInfos.set(pedido.tipoProjeto, {
+                                    totalItens: 0,
+                                    itensSeparados: 0
+                                });
+                            }
+                            
+                            // Atualizar informações do projeto
+                            const projetoInfo = projetoInfos.get(pedido.tipoProjeto);
+                            
+                            itensSnapshot.forEach(doc => {
+                                const item = doc.data();
+                                const temQuantidadeParaSeparar = (item.QtdItemNecFinal || 0) > 0;
+                                const temQuantidadeParaDevolver = item.devolucaoEstoque && item.devolucaoEstoque.qtde > 0;
+                                
+                                if (temQuantidadeParaSeparar || temQuantidadeParaDevolver) {
+                                    projetoInfo.totalItens++;
+                                    
+                                    // Verificar se o item já foi separado para produção
+                                    if (item.statusItem === 'Separado para Produção' || item.qtdProducao > 0) {
+                                        projetoInfo.itensSeparados++;
+                                    }
+                                }
+                            });
                         }
                     }
                 } catch (err) {
@@ -259,10 +386,28 @@ class SistemaSeparacaoProducao {
             }
             
             // Popular select de projetos
+            const statusFilter = this.selectStatusFilter.value;
+            
             Array.from(projetos).sort().forEach(projeto => {
+                const info = projetoInfos.get(projeto) || { totalItens: 0, itensSeparados: 0 };
+                const statusProjeto = this.calcularStatusProjeto(projeto, info);
+                
+                // Se o filtro estiver ativo, não adicionar projetos totalmente separados
+                if (statusFilter === 'ocultar-separados' && statusProjeto === 'separado') {
+                    return;
+                }
+                
                 const option = document.createElement('option');
                 option.value = projeto;
                 option.textContent = projeto;
+                
+                // Aplicar cor baseada no status
+                if (statusProjeto === 'separado') {
+                    option.classList.add('projeto-separado');
+                } else if (statusProjeto === 'parcial') {
+                    option.classList.add('projeto-parcial');
+                }
+                
                 this.selectProjeto.appendChild(option);
             });
             
@@ -277,6 +422,21 @@ class SistemaSeparacaoProducao {
         } finally {
             this.hideLoading();
         }
+    }
+    
+    /**
+     * Calcular status de separação para um projeto
+     */
+    calcularStatusProjeto(projeto, info) {
+        if (!info || info.totalItens === 0) return 'normal';
+        
+        if (info.itensSeparados === info.totalItens) {
+            return 'separado'; // Todos separados
+        } else if (info.itensSeparados > 0) {
+            return 'parcial'; // Alguns separados
+        }
+        
+        return 'normal'; // Nenhum separado
     }
     
     /**
@@ -316,6 +476,7 @@ class SistemaSeparacaoProducao {
             
             // Buscar listas de material (sem filtrar por qtdNecessariaFinal para evitar índice composto)
             const listas = new Set();
+            const listaInfos = new Map(); // Para armazenar informações sobre itens por lista
             
             for (const pedidoId of pedidoIds) {
                 try {
@@ -330,7 +491,25 @@ class SistemaSeparacaoProducao {
                         const temQuantidadeParaDevolver = item.devolucaoEstoque && item.devolucaoEstoque.qtde > 0;
                         
                         if ((temQuantidadeParaSeparar || temQuantidadeParaDevolver) && item.listaMaterial) {
+                            // Adicionar lista
                             listas.add(item.listaMaterial);
+                            
+                            // Inicializar informações da lista se necessário
+                            if (!listaInfos.has(item.listaMaterial)) {
+                                listaInfos.set(item.listaMaterial, {
+                                    totalItens: 0,
+                                    itensSeparados: 0
+                                });
+                            }
+                            
+                            // Atualizar informações da lista
+                            const listaInfo = listaInfos.get(item.listaMaterial);
+                            listaInfo.totalItens++;
+                            
+                            // Verificar se o item já foi separado para produção
+                            if (item.statusItem === 'Separado para Produção' || item.qtdProducao > 0) {
+                                listaInfo.itensSeparados++;
+                            }
                         }
                     });
                 } catch (err) {
@@ -339,10 +518,28 @@ class SistemaSeparacaoProducao {
             }
             
             // Popular select de listas
+            const statusFilter = this.selectStatusFilter.value;
+            
             Array.from(listas).sort().forEach(lista => {
+                const info = listaInfos.get(lista) || { totalItens: 0, itensSeparados: 0 };
+                const statusLista = this.calcularStatusLista(lista, info);
+                
+                // Se o filtro estiver ativo, não adicionar listas totalmente separadas
+                if (statusFilter === 'ocultar-separados' && statusLista === 'separado') {
+                    return;
+                }
+                
                 const option = document.createElement('option');
                 option.value = lista;
                 option.textContent = lista;
+                
+                // Aplicar cor baseada no status
+                if (statusLista === 'separado') {
+                    option.classList.add('lista-separada');
+                } else if (statusLista === 'parcial') {
+                    option.classList.add('lista-parcial');
+                }
+                
                 this.selectLista.appendChild(option);
             });
             
@@ -357,6 +554,21 @@ class SistemaSeparacaoProducao {
         } finally {
             this.hideLoading();
         }
+    }
+    
+    /**
+     * Calcular status de separação para uma lista
+     */
+    calcularStatusLista(lista, info) {
+        if (!info || info.totalItens === 0) return 'normal';
+        
+        if (info.itensSeparados === info.totalItens) {
+            return 'separado'; // Todos separados
+        } else if (info.itensSeparados > 0) {
+            return 'parcial'; // Alguns separados
+        }
+        
+        return 'normal'; // Nenhum separado
     }
     
     /**
@@ -378,6 +590,7 @@ class SistemaSeparacaoProducao {
         const cliente = this.selectCliente.value;
         const projeto = this.selectProjeto.value;
         const lista = this.selectLista.value;
+        const statusFilter = this.selectStatusFilter.value;
         
         if (!cliente || !projeto || !lista) {
             this.showToast('Selecione todos os filtros', 'warning');
@@ -427,8 +640,11 @@ class SistemaSeparacaoProducao {
                         }
                         
                         // Verificar se já foi separado para produção
-                        if (item.statusItem === 'Separado para Produção' || item.qtdProducao > 0) {
-                            console.log(`⏭️ Item ${item.codigo} - Já foi separado para produção`);
+                        const jaSeparado = item.statusItem === 'Separado para Produção' || item.qtdProducao > 0;
+                        
+                        // Aplicar filtro de status
+                        if (statusFilter === 'ocultar-separados' && jaSeparado) {
+                            console.log(`⏭️ Item ${item.codigo} - Já foi separado para produção e filtro está ativo`);
                             continue;
                         }
                         
@@ -856,6 +1072,446 @@ class SistemaSeparacaoProducao {
     }
     
     /**
+     * Abrir modal de itens separados
+     */
+    async abrirModalSeparados() {
+        try {
+            this.showLoading('Carregando itens separados...');
+            
+            const cliente = this.selectCliente.value;
+            const projeto = this.selectProjeto.value;
+            const lista = this.selectLista.value;
+            
+            // Consultar itens já separados
+            let itensSeparadosQuery = this.db.collection('itens')
+                .where('statusItem', '==', 'Separado para Produção');
+            
+            // Filtrar por cliente, projeto e lista se estiverem selecionados
+            if (cliente) {
+                // Buscar todos os itens separados e filtrar no lado do cliente
+                const separadosSnapshot = await itensSeparadosQuery.get();
+                
+                // Verificar se há itens
+                if (separadosSnapshot.empty) {
+                    this.showToast('Nenhum item separado encontrado', 'warning');
+                    this.hideLoading();
+                    return;
+                }
+                
+                // Filtrar itens de acordo com os critérios selecionados
+                const itensSeparados = [];
+                
+                // Precisamos primeiro obter os pedidos para poder relacionar com os itens
+                const pedidosSnapshot = await this.db.collection('pedidos').get();
+                const pedidosMap = new Map();
+                
+                pedidosSnapshot.forEach(doc => {
+                    pedidosMap.set(doc.id, doc.data());
+                });
+                
+                // Filtrar os itens
+                for (const doc of separadosSnapshot.docs) {
+                    const item = { id: doc.id, ...doc.data() };
+                    
+                    // Verificar se tem pedidoId e procurar o pedido pai
+                    if (item.pedidoId) {
+                        const pedido = pedidosMap.get(item.pedidoId);
+                        
+                        if (pedido) {
+                            // Filtrar por cliente
+                            if (cliente && pedido.clienteNome !== cliente) {
+                                continue;
+                            }
+                            
+                            // Filtrar por projeto
+                            if (projeto && pedido.tipoProjeto !== projeto) {
+                                continue;
+                            }
+                        }
+                    }
+                    
+                    // Filtrar por lista
+                    if (lista && item.listaMaterial !== lista) {
+                        continue;
+                    }
+                    
+                    // Adicionar item para exibição
+                    itensSeparados.push(item);
+                }
+                
+                // Renderizar itens na tabela
+                this.renderTabelaSeparados(itensSeparados);
+            } else {
+                // Se não houver filtros, exibir todos os itens separados
+                const separadosSnapshot = await itensSeparadosQuery.get();
+                
+                if (separadosSnapshot.empty) {
+                    this.showToast('Nenhum item separado encontrado', 'warning');
+                    this.hideLoading();
+                    return;
+                }
+                
+                const itensSeparados = separadosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                this.renderTabelaSeparados(itensSeparados);
+            }
+            
+            // Mostrar o modal
+            this.modalSeparados.style.display = 'flex';
+            
+        } catch (error) {
+            console.error('Erro ao carregar itens separados:', error);
+            this.showToast('Erro ao carregar itens separados: ' + error.message, 'error');
+        } finally {
+            this.hideLoading();
+        }
+    }
+    
+    /**
+     * Abrir modal de itens devolvidos
+     */
+    async abrirModalDevolvidos() {
+        try {
+            this.showLoading('Carregando itens devolvidos...');
+            
+            const cliente = this.selectCliente.value;
+            const projeto = this.selectProjeto.value;
+            const lista = this.selectLista.value;
+            
+            // Consultar itens devolvidos ao estoque
+            let itensDevolvidosQuery = this.db.collection('itens')
+                .where('devolvidoEstoque', '==', true);
+            
+            // Filtrar por cliente, projeto e lista se estiverem selecionados
+            if (cliente) {
+                // Buscar todos os itens devolvidos e filtrar no lado do cliente
+                const devolvidosSnapshot = await itensDevolvidosQuery.get();
+                
+                // Verificar se há itens
+                if (devolvidosSnapshot.empty) {
+                    this.showToast('Nenhum item devolvido encontrado', 'warning');
+                    this.hideLoading();
+                    return;
+                }
+                
+                // Filtrar itens de acordo com os critérios selecionados
+                const itensDevolvidos = [];
+                
+                // Precisamos primeiro obter os pedidos para poder relacionar com os itens
+                const pedidosSnapshot = await this.db.collection('pedidos').get();
+                const pedidosMap = new Map();
+                
+                pedidosSnapshot.forEach(doc => {
+                    pedidosMap.set(doc.id, doc.data());
+                });
+                
+                // Filtrar os itens
+                for (const doc of devolvidosSnapshot.docs) {
+                    const item = { id: doc.id, ...doc.data() };
+                    
+                    // Verificar se tem pedidoId e procurar o pedido pai
+                    if (item.pedidoId) {
+                        const pedido = pedidosMap.get(item.pedidoId);
+                        
+                        if (pedido) {
+                            // Filtrar por cliente
+                            if (cliente && pedido.clienteNome !== cliente) {
+                                continue;
+                            }
+                            
+                            // Filtrar por projeto
+                            if (projeto && pedido.tipoProjeto !== projeto) {
+                                continue;
+                            }
+                        }
+                    } else {
+                        // Para itens sem pedidoId (criados pela análise), verificar campos diretos
+                        if (cliente && item.cliente !== cliente) {
+                            continue;
+                        }
+                        
+                        if (projeto && item.tipoProjeto !== projeto) {
+                            continue;
+                        }
+                    }
+                    
+                    // Filtrar por lista
+                    if (lista && item.listaMaterial !== lista) {
+                        continue;
+                    }
+                    
+                    // Adicionar item para exibição
+                    itensDevolvidos.push(item);
+                }
+                
+                // Renderizar itens na tabela
+                this.renderTabelaDevolvidos(itensDevolvidos);
+            } else {
+                // Se não houver filtros, exibir todos os itens devolvidos
+                const devolvidosSnapshot = await itensDevolvidosQuery.get();
+                
+                if (devolvidosSnapshot.empty) {
+                    this.showToast('Nenhum item devolvido encontrado', 'warning');
+                    this.hideLoading();
+                    return;
+                }
+                
+                const itensDevolvidos = devolvidosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                this.renderTabelaDevolvidos(itensDevolvidos);
+            }
+            
+            // Mostrar o modal
+            this.modalDevolvidos.style.display = 'flex';
+            
+        } catch (error) {
+            console.error('Erro ao carregar itens devolvidos:', error);
+            this.showToast('Erro ao carregar itens devolvidos: ' + error.message, 'error');
+        } finally {
+            this.hideLoading();
+        }
+    }
+    
+    /**
+     * Renderizar tabela de itens separados
+     */
+    renderTabelaSeparados(itensSeparados) {
+        if (itensSeparados.length === 0) {
+            this.tabelaSeparadosBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="empty-state">
+                        <h3>Nenhum item separado encontrado</h3>
+                        <p>Não existem itens separados para produção nos filtros selecionados.</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        // Ordenar itens por código
+        itensSeparados.sort((a, b) => {
+            const codigoA = a.codigo || '';
+            const codigoB = b.codigo || '';
+            return codigoA.localeCompare(codigoB);
+        });
+        
+        // Construir linhas da tabela
+        const linhas = itensSeparados.map(item => {
+            // Formatar data de separação
+            let dataSeparacao = 'N/D';
+            if (item.dataSeparacaoProducao) {
+                const data = item.dataSeparacaoProducao.toDate ? item.dataSeparacaoProducao.toDate() : new Date(item.dataSeparacaoProducao);
+                dataSeparacao = data.toLocaleString('pt-BR');
+            }
+            
+            // Calcular quantidade separada - pode estar em qtdProducao ou QtdItemNecFinal
+            const qtdSeparada = item.qtdProducao || item.QtdItemNecFinal || 0;
+            
+            return `
+                <tr>
+                    <td class="px-6 py-4">${item.codigo || '-'}</td>
+                    <td class="px-6 py-4">${item.descricao || item.item || item.produto || '-'}</td>
+                    <td class="px-6 py-4">${qtdSeparada}</td>
+                    <td class="px-6 py-4">${dataSeparacao}</td>
+                    <td class="px-6 py-4">
+                        <button class="btn-action btn-warning btn-sm desfazer-separacao" data-id="${item.id}">
+                            <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                            </svg>
+                            Desfazer Separação
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        this.tabelaSeparadosBody.innerHTML = linhas.join('');
+        
+        // Adicionar event listeners para os botões de desfazer separação
+        const botoesDesfazer = this.tabelaSeparadosBody.querySelectorAll('.desfazer-separacao');
+        botoesDesfazer.forEach(botao => {
+            botao.addEventListener('click', () => {
+                const itemId = botao.dataset.id;
+                this.handleDesfazerSeparacao(itemId);
+            });
+        });
+    }
+    
+    /**
+     * Renderizar tabela de itens devolvidos
+     */
+    renderTabelaDevolvidos(itensDevolvidos) {
+        if (itensDevolvidos.length === 0) {
+            this.tabelaDevolvidosBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="empty-state">
+                        <h3>Nenhum item devolvido encontrado</h3>
+                        <p>Não existem itens devolvidos ao estoque nos filtros selecionados.</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        // Ordenar itens por código
+        itensDevolvidos.sort((a, b) => {
+            const codigoA = a.codigo || '';
+            const codigoB = b.codigo || '';
+            return codigoA.localeCompare(codigoB);
+        });
+        
+        // Construir linhas da tabela
+        const linhas = itensDevolvidos.map(item => {
+            // Formatar data de devolução
+            let dataDevolucao = 'N/D';
+            if (item.dataDevolucaoEstoque) {
+                const data = item.dataDevolucaoEstoque.toDate ? item.dataDevolucaoEstoque.toDate() : new Date(item.dataDevolucaoEstoque);
+                dataDevolucao = data.toLocaleString('pt-BR');
+            }
+            
+            // Calcular quantidade devolvida
+            const qtdDevolvida = item.devolucaoEstoque?.qtde || 0;
+            
+            return `
+                <tr>
+                    <td class="px-6 py-4">${item.codigo || '-'}</td>
+                    <td class="px-6 py-4">${item.descricao || item.item || item.produto || '-'}</td>
+                    <td class="px-6 py-4">${qtdDevolvida}</td>
+                    <td class="px-6 py-4">${dataDevolucao}</td>
+                    <td class="px-6 py-4">
+                        <button class="btn-action btn-warning btn-sm desfazer-devolucao" data-id="${item.id}">
+                            <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                            </svg>
+                            Desfazer Devolução
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        this.tabelaDevolvidosBody.innerHTML = linhas.join('');
+        
+        // Adicionar event listeners para os botões de desfazer devolução
+        const botoesDesfazer = this.tabelaDevolvidosBody.querySelectorAll('.desfazer-devolucao');
+        botoesDesfazer.forEach(botao => {
+            botao.addEventListener('click', () => {
+                const itemId = botao.dataset.id;
+                this.handleDesfazerDevolucao(itemId);
+            });
+        });
+    }
+    
+    /**
+     * Desfazer separação de um item
+     */
+    async handleDesfazerSeparacao(itemId) {
+        try {
+            if (!confirm('Tem certeza que deseja desfazer a separação deste item?')) {
+                return;
+            }
+            
+            this.showLoading('Desfazendo separação...');
+            
+            // Buscar item
+            const itemDoc = await this.db.collection('itens').doc(itemId).get();
+            
+            if (!itemDoc.exists) {
+                this.showToast('Item não encontrado', 'error');
+                this.hideLoading();
+                return;
+            }
+            
+            const item = itemDoc.data();
+            
+            // Criar batch para transação
+            const batch = this.db.batch();
+            const itemRef = this.db.collection('itens').doc(itemId);
+            
+            // Atualizar status e remover informações de separação
+            batch.update(itemRef, {
+                statusItem: 'Disponível', // Voltar para status disponível
+                qtdProducao: 0, // Zerar quantidade em produção
+                dataSeparacaoProducao: null,
+                responsavelSeparacao: '',
+                observacoesSeparacao: ''
+            });
+            
+            // Executar batch
+            await batch.commit();
+            
+            this.showToast('Separação desfeita com sucesso', 'success');
+            
+            // Atualizar a lista de itens separados
+            this.abrirModalSeparados();
+            
+            // Se os filtros estiverem selecionados, atualizar a tabela principal
+            if (this.selectCliente.value && this.selectProjeto.value && this.selectLista.value) {
+                this.carregarItensParaSeparacao();
+            }
+            
+        } catch (error) {
+            console.error('Erro ao desfazer separação:', error);
+            this.showToast('Erro ao desfazer separação: ' + error.message, 'error');
+        } finally {
+            this.hideLoading();
+        }
+    }
+    
+    /**
+     * Desfazer devolução de um item
+     */
+    async handleDesfazerDevolucao(itemId) {
+        try {
+            if (!confirm('Tem certeza que deseja desfazer a devolução deste item?')) {
+                return;
+            }
+            
+            this.showLoading('Desfazendo devolução...');
+            
+            // Buscar item
+            const itemDoc = await this.db.collection('itens').doc(itemId).get();
+            
+            if (!itemDoc.exists) {
+                this.showToast('Item não encontrado', 'error');
+                this.hideLoading();
+                return;
+            }
+            
+            const item = itemDoc.data();
+            
+            // Criar batch para transação
+            const batch = this.db.batch();
+            const itemRef = this.db.collection('itens').doc(itemId);
+            
+            // Atualizar status e remover informações de devolução
+            batch.update(itemRef, {
+                devolvidoEstoque: false, // Marcar como não devolvido
+                dataDevolucaoEstoque: null, // Remover data de devolução
+                responsavelDevolucao: '', // Limpar responsável
+                observacoesDevolucao: '' // Limpar observações
+            });
+            
+            // Executar batch
+            await batch.commit();
+            
+            this.showToast('Devolução desfeita com sucesso', 'success');
+            
+            // Atualizar a lista de itens devolvidos
+            this.abrirModalDevolvidos();
+            
+            // Se os filtros estiverem selecionados, atualizar a tabela principal
+            if (this.selectCliente.value && this.selectProjeto.value && this.selectLista.value) {
+                this.carregarItensParaSeparacao();
+            }
+            
+        } catch (error) {
+            console.error('Erro ao desfazer devolução:', error);
+            this.showToast('Erro ao desfazer devolução: ' + error.message, 'error');
+        } finally {
+            this.hideLoading();
+        }
+    }
+    
+    /**
      * Abrir modal de devolução
      */
     abrirModalDevolucao() {
@@ -891,6 +1547,21 @@ class SistemaSeparacaoProducao {
         this.modalDevolucao.style.display = 'flex';
     }
     
+    /**
+     * Limpar tabela para separação
+     */
+    limparTabelaParaSeparacao() {
+        this.tabelaItensBody.innerHTML = `
+            <tr>
+                <td colspan="9" class="empty-state">
+                    <h3>Aguardando Seleção</h3>
+                    <p>Selecione um cliente, projeto e lista de material para ver os itens disponíveis para separação.</p>
+                </td>
+            </tr>
+        `;
+        this.tabelaSection.classList.add('hidden');
+    }
+
     /**
      * Fechar modal
      */

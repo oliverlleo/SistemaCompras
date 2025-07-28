@@ -37,12 +37,12 @@
     <div class="container">
         <div class="header">
             <h1>📁 Sistema 100% Completo e Atualizado</h1>
-            <p>Visualizador de Código - Sistema de Gerenciamento de Pedidos v5.6</p>
+            <p>Visualizador de Código - Sistema de Gerenciamento de Pedidos v5.7</p>
         </div>
 
         <div class="status-banner">
-            <h2 style="margin: 0 0 10px 0; font-size: 1.5rem;">🚀 Sistema v5.6 - Atualização de Listas de Materiais!</h2>
-            <p style="margin: 0; font-size: 1rem;">Listas atualizadas: "Vedação" agora é "Esteira", adicionada "Motor" para todos os projetos com esteira, e corrigido o problema de confirmação ao adicionar nova lista!</p>
+            <h2 style="margin: 0 0 10px 0; font-size: 1.5rem;">🚀 Sistema v5.7 - Atualização do Módulo de Separação!</h2>
+            <p style="margin: 0; font-size: 1rem;">Adicionado botão "Ver Devolvidos" para visualizar todos os itens devolvidos ao estoque, com a possibilidade de desfazer devoluções! Também foram implementadas melhorias no sistema de separação para produção.</p>
         </div>
 
         <div class="download-section">
@@ -55,15 +55,15 @@
                 Download Sistema Completo (.zip)
             </button>
             <div style="margin-top: 20px; font-size: 0.9rem; color: #64748b;">
-                <strong>30 arquivos</strong> • <strong>Versão 5.6</strong> • <strong>100% Funcional</strong> • <strong>Listas de Materiais Atualizadas</strong>
+                <strong>30 arquivos</strong> • <strong>Versão 5.7</strong> • <strong>100% Funcional</strong> • <strong>Módulo de Separação Atualizado</strong>
             </div>
         </div>
 
         <div class="features">
             <div class="feature">
-                <div class="feature-icon">🔧</div>
-                <h3>Listas de Materiais - ATUALIZADAS</h3>
-                <p>Listas de materiais atualizadas: "Vedação" substituído por "Esteira", adicionado "Motor" para projetos com esteira, e corrigido problema no formulário</p>
+                <div class="feature-icon">🔍</div>
+                <h3>Ver Devolvidos - NOVA FUNCIONALIDADE</h3>
+                <p>Nova função para visualizar itens devolvidos ao estoque e possibilidade de desfazer devoluções com um clique</p>
             </div>
             <div class="feature">
                 <div class="feature-icon">📦</div>
@@ -104,7 +104,7 @@
                     <div class="file-item">💰 <span>empenho.html</span> <span class="check-icon">✅</span></div>
                     <div class="file-item">🏪 <span>gestao-compras.html</span> <span class="check-icon">✅</span></div>
                     <div class="file-item">📦 <span>recebimento.html</span> <span class="check-icon">✅</span></div>
-                    <div class="file-item">🔧 <span>separacao-producao.html</span> <span class="check-icon">✅</span></div>
+                    <div class="file-item">🔧 <span>separacao-producao.html</span> <span class="check-icon">🔥 ATUALIZADO</span></div>
                     <div class="file-item">⚙️ <span>tratamento-empenho.html</span> <span class="check-icon">✅</span></div>
                     <div class="file-item">👁️ <span>code-viewer.html</span> <span class="check-icon">🔥 ATUALIZADO</span></div>
                     <div class="file-item">📖 <span>YOUWARE.md</span> <span class="check-icon">✅</span></div>
@@ -130,9 +130,9 @@
                     <div class="file-item">🚀 <span>js/main.js</span> <span class="check-icon">✅</span></div>
                     <div class="file-item">📦 <span>js/recebimento.js</span> <span class="check-icon">✅</span></div>
                     <div class="file-item">📦 <span>js/recebimentofinal.js</span> <span class="check-icon">✅</span></div>
-                    <div class="file-item">🔧 <span>js/separacao-producao.js</span> <span class="check-icon">✅</span></div>
+                    <div class="file-item">🔧 <span>js/separacao-producao.js</span> <span class="check-icon">🔥 ATUALIZADO</span></div>
                     <div class="file-item">⚙️ <span>js/tratamento-empenho.js</span> <span class="check-icon">✅</span></div>
-                    <div class="file-item">🎯 <span>js/ui-manager.js</span> <span class="check-icon">🔥 ATUALIZADO</span></div>
+                    <div class="file-item">🎯 <span>js/ui-manager.js</span> <span class="check-icon">✅</span></div>
                 </div>
 
                 <div class="file-category">
@@ -215,7 +215,7 @@
                 const content = await zip.generateAsync({ type: 'blob' });
                 
                 // Download
-                saveAs(content, 'sistema-gerenciamento-pedidos-completo-v5.6.zip');
+                saveAs(content, 'sistema-gerenciamento-pedidos-completo-v5.7.zip');
                 
                 btn.innerHTML = '✅ Download concluído!';
                 setTimeout(() => {
@@ -234,9 +234,9 @@
         });
 
         // Log de inicialização
-        console.log('📋 Visualizador de código v5.6 carregado');
+        console.log('📋 Visualizador de código v5.7 carregado');
         console.log('📦 Total de arquivos no sistema:', allFiles.length);
-        console.log('🔥 Última atualização: Atualização das listas de materiais e correção do formulário');
+        console.log('🔥 Última atualização: Módulo de Separação com botão "Ver Devolvidos" e funcionalidade de desfazer devolução');
         console.log('✅ Sistema 100% funcional e atualizado');
     </script>
 </body>

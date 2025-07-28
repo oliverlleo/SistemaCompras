@@ -85,6 +85,8 @@ class SistemaEmpenho {
         
         // Modal de Itens Empenhados
         this.btnFecharEmpenhados.addEventListener('click', () => this.fecharModalEmpenhados());
+        this.btnExportarEmpenhados = document.getElementById('btnExportarEmpenhados');
+        this.btnExportarEmpenhados.addEventListener('click', () => this.exportarTabelaEmpenhados());
 
         // Fechar modals ao clicar fora
         this.modalEmpenho.addEventListener('click', (e) => {
@@ -756,6 +758,68 @@ class SistemaEmpenho {
     fecharModalEmpenhados() {
         this.modalEmpenhados.style.display = 'none';
         this.tabelaEmpenhadosBody.innerHTML = '';
+    }
+    
+    /**
+     * Exportar tabela de itens empenhados para Excel
+     */
+    exportarTabelaEmpenhados() {
+        try {
+            console.log('📊 Exportando tabela de itens empenhados para Excel...');
+            
+            // Verificar se há itens para exportar
+            const tbody = this.tabelaEmpenhadosBody;
+            const rows = tbody.querySelectorAll('tr');
+            
+            if (rows.length === 0 || (rows.length === 1 && rows[0].querySelector('.empty-state'))) {
+                this.showToast('Nenhum item empenhado para exportar', 'warning');
+                return;
+            }
+            
+            // Coletar dados das linhas da tabela
+            const dados = [];
+            
+            rows.forEach(row => {
+                // Ignorar linhas de mensagem vazia
+                if (row.querySelector('.empty-state')) return;
+                
+                // Obter células de texto (não incluir a célula do botão)
+                const cells = row.querySelectorAll('td:not(:last-child)');
+                
+                dados.push({
+                    'Código': cells[0].textContent.trim(),
+                    'Descrição': cells[1].textContent.trim(),
+                    'Quantidade Necessária': cells[2].textContent.trim(),
+                    'Quantidade Empenhada': cells[3].textContent.trim()
+                });
+            });
+            
+            if (dados.length === 0) {
+                this.showToast('Erro ao processar dados para exportação', 'error');
+                return;
+            }
+            
+            // Criar workbook e worksheet
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(dados);
+            
+            // Adicionar worksheet ao workbook
+            XLSX.utils.book_append_sheet(wb, ws, 'Itens Empenhados');
+            
+            // Gerar nome do arquivo com data atual
+            const dataAtual = new Date().toISOString().split('T')[0];
+            const nomeArquivo = `Itens_Empenhados_${dataAtual}.xlsx`;
+            
+            // Fazer o download do arquivo
+            XLSX.writeFile(wb, nomeArquivo);
+            
+            console.log('✅ Tabela exportada com sucesso:', nomeArquivo);
+            this.showToast(`Tabela exportada como "${nomeArquivo}"`, 'success');
+            
+        } catch (error) {
+            console.error('❌ Erro ao exportar tabela:', error);
+            this.showToast('Erro ao exportar tabela: ' + error.message, 'error');
+        }
     }
     
     /**

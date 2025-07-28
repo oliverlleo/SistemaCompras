@@ -326,6 +326,9 @@ class RecebimentoManager {
                     return `Erro no teste: ${error.message}`;
                 }
             };
+            
+            // Debug e funções de demonstração para a interface
+            console.log('🧪 Funções de teste disponíveis:');
 
             console.log('🧪 Funções de teste disponíveis:');
             console.log('1. window.criarItemTesteInicial() - Cria um item individual');
@@ -385,6 +388,23 @@ class RecebimentoManager {
 
         document.getElementById('btnFecharModalDetalhesFornecedor2').addEventListener('click', () => {
             this.fecharModalDetalhesFornecedor();
+        });
+
+        // Modal de itens recebidos
+        document.getElementById('btnVerRecebido').addEventListener('click', () => {
+            this.abrirModalRecebidos();
+        });
+
+        document.getElementById('btnFecharModalRecebidos').addEventListener('click', () => {
+            this.fecharModalRecebidos();
+        });
+
+        document.getElementById('btnFecharModalRecebidos2').addEventListener('click', () => {
+            this.fecharModalRecebidos();
+        });
+        
+        document.getElementById('btnExportarRecebidos').addEventListener('click', () => {
+            this.exportarTabelaRecebidos();
         });
 
         // Seleção
@@ -1338,11 +1358,355 @@ class RecebimentoManager {
     }
 
     // ============================================================================
+    // MODAL DE ITENS RECEBIDOS
+    // ============================================================================
+    
+    // Função para exportar a tabela de itens recebidos para Excel
+    exportarTabelaRecebidos() {
+        console.log('📊 Exportando tabela de itens recebidos...');
+        
+        try {
+            // Obter dados filtrados atuais com base nos filtros selecionados
+            const filtroCliente = document.getElementById('filtroClienteRecebidos').value;
+            const filtroFornecedor = document.getElementById('filtroFornecedorRecebidos').value;
+            const filtroProjeto = document.getElementById('filtroProjetoRecebidos').value;
+            const filtroLista = document.getElementById('filtroListaMaterialRecebidos').value;
+            
+            const dados = this.itensRecebidosCache.filter(item => {
+                if (filtroCliente && item.clienteNome !== filtroCliente) return false;
+                if (filtroFornecedor && item.fornecedor !== filtroFornecedor) return false;
+                if (filtroProjeto && item.tipoProjeto !== filtroProjeto) return false;
+                if (filtroLista && item.listaMaterial !== filtroLista) return false;
+                
+                return true;
+            });
+            
+            // Formatação para Excel
+            const dadosFormatados = dados.map(item => ({
+                'Tipo': item.tipoCompra,
+                'Cliente': item.clienteNome,
+                'Código': item.codigo,
+                'Descrição': item.descricao,
+                'Quantidade Recebida': item.qtdRecebida,
+                'Fornecedor': item.fornecedor,
+                'Projeto': item.tipoProjeto,
+                'Lista Material': item.listaMaterial,
+                'Prazo Entrega': item.prazoEntrega,
+                'Data Recebimento': item.dataRecebimento
+            }));
+            
+            // Criar planilha Excel
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(dadosFormatados);
+            
+            // Adicionar planilha ao workbook
+            XLSX.utils.book_append_sheet(wb, ws, 'Itens Recebidos');
+            
+            // Gerar nome de arquivo com data
+            const data = new Date().toISOString().split('T')[0];
+            const nomeArquivo = `Itens_Recebidos_${data}.xlsx`;
+            
+            // Download do arquivo
+            XLSX.writeFile(wb, nomeArquivo);
+            
+            console.log(`✅ Exportação concluída: ${nomeArquivo}`);
+            alert(`Tabela exportada com sucesso: ${nomeArquivo}`);
+            return true;
+        } catch (error) {
+            console.error('❌ Erro ao exportar tabela:', error);
+            alert('Erro ao exportar a tabela. Verifique o console para mais detalhes.');
+            return false;
+        }
+    }
+
+    async abrirModalRecebidos() {
+        try {
+            this.mostrarLoading('Carregando itens recebidos...');
+            
+            // Buscar todos os itens que têm histórico de recebimentos
+            const snapshot = await this.db.collection('itens')
+                .get();
+                
+            const itensRecebidos = [];
+            
+            // Filtrar itens que têm histórico de recebimentos
+            snapshot.forEach(doc => {
+                const item = doc.data();
+                
+                // Verificar se tem histórico de recebimentos
+                if (item.historicoRecebimentos && item.historicoRecebimentos.length > 0) {
+                    // Para cada recebimento, criar uma entrada na lista
+                    item.historicoRecebimentos.forEach(recebimento => {
+                        const dataRecebimento = recebimento.dataRecebimento || recebimento.data || '';
+                        const formattedDate = dataRecebimento ? new Date(dataRecebimento).toLocaleDateString('pt-BR') : 'N/D';
+                        
+                        // Determinar o tipo de compra com maior precisão
+                        let tipoCompra = 'Inicial'; // Default
+                        
+                        // Verificar se é item de compra final através de diferentes indicadores
+                        if (item.historicoCompraFinal && item.historicoCompraFinal.length > 0) {
+                            tipoCompra = 'Final';
+                        } else if (item.criadoPorAnalise || item.analiseFinalRealizada) {
+                            tipoCompra = 'Final';
+                        } else if (recebimento.tipoRecebimento) {
+                            tipoCompra = recebimento.tipoRecebimento;
+                        }
+                        
+                        // Obter cliente de diferentes locais conforme o tipo de item
+                        let clienteNome = item.clienteNome || item.cliente || 'N/D';
+                        
+                        // Obter fornecedor de diferentes locais conforme o tipo de item
+                        let fornecedor = item.fornecedor || 'N/D';
+                        
+                        // Tratamento especial para itens de tipo Final
+                        if (tipoCompra === 'Final' || item.historicoCompraFinal) {
+                            // Para compra final, verifique locais adicionais para informações
+                            if (item.cliente && (!clienteNome || clienteNome === 'N/D')) {
+                                clienteNome = item.cliente;
+                            }
+                            
+                            // Verificar em recebimento
+                            if (recebimento.fornecedor && (!fornecedor || fornecedor === 'N/D')) {
+                                fornecedor = recebimento.fornecedor;
+                            }
+                            
+                            // Verificar em histórico de compra final
+                            if (item.historicoCompraFinal && item.historicoCompraFinal.length > 0) {
+                                // Obter o registro mais recente
+                                const ultimaCompra = item.historicoCompraFinal[item.historicoCompraFinal.length - 1];
+                                if (ultimaCompra.fornecedor && (!fornecedor || fornecedor === 'N/D')) {
+                                    fornecedor = ultimaCompra.fornecedor;
+                                }
+                            }
+                        }
+                        
+                        // Obter tipoProjeto
+                        const tipoProjeto = item.tipoProjeto || 'N/D';
+                        
+                        // Obter prazo de entrega de diferentes locais com base no tipo
+                        let prazoEntrega = 'N/D';
+                        
+                        if (item.prazoEntrega) {
+                            prazoEntrega = new Date(item.prazoEntrega).toLocaleDateString('pt-BR');
+                        } else if (tipoCompra === 'Final' && item.historicoCompraFinal && item.historicoCompraFinal.length > 0) {
+                            // Para tipo final, buscar no histórico de compra final
+                            const ultimaCompra = item.historicoCompraFinal[item.historicoCompraFinal.length - 1];
+                            if (ultimaCompra.prazoEntrega) {
+                                if (ultimaCompra.prazoEntrega instanceof Date || ultimaCompra.prazoEntrega.seconds) {
+                                    // É um timestamp do Firestore
+                                    prazoEntrega = new Date(
+                                        ultimaCompra.prazoEntrega.seconds ? 
+                                        ultimaCompra.prazoEntrega.seconds * 1000 : 
+                                        ultimaCompra.prazoEntrega
+                                    ).toLocaleDateString('pt-BR');
+                                } else {
+                                    // É uma string de data
+                                    prazoEntrega = new Date(ultimaCompra.prazoEntrega).toLocaleDateString('pt-BR');
+                                }
+                            }
+                        }
+                        
+                        itensRecebidos.push({
+                            id: doc.id,
+                            codigo: item.codigo || 'N/D',
+                            descricao: item.descricao || item.produtoDescricao || 'N/D',
+                            clienteNome: clienteNome,
+                            tipoProjeto: tipoProjeto,
+                            listaMaterial: item.listaMaterial || 'N/D',
+                            fornecedor: fornecedor,
+                            prazoEntrega: prazoEntrega,
+                            qtdRecebida: recebimento.qtde || recebimento.qtdeRecebida || 0,
+                            tipoCompra: tipoCompra,
+                            dataRecebimento: formattedDate
+                        });
+                    });
+                }
+            });
+            
+            this.renderizarTabelaRecebidos(itensRecebidos);
+            
+            // Mostrar modal
+            document.getElementById('modalRecebidos').classList.remove('hidden');
+            
+        } catch (error) {
+            console.error('Erro ao carregar itens recebidos:', error);
+            this.mostrarErro('Erro ao carregar itens recebidos');
+        } finally {
+            this.esconderLoading();
+        }
+    }
+    
+    // Armazenar todos os itens recebidos para filtrar em memória
+    itensRecebidosCache = [];
+    
+    // Preencher os filtros do modal de Itens Recebidos
+    preencherFiltrosModalRecebidos(itensRecebidos) {
+        // Obter listas únicas de clientes, fornecedores, projetos e listas de material
+        const clientes = new Set();
+        const fornecedores = new Set();
+        const projetos = new Set();
+        const listasMaterial = new Set();
+        
+        itensRecebidos.forEach(item => {
+            if (item.clienteNome && item.clienteNome !== 'N/D') clientes.add(item.clienteNome);
+            if (item.fornecedor && item.fornecedor !== 'N/D') fornecedores.add(item.fornecedor);
+            if (item.tipoProjeto && item.tipoProjeto !== 'N/D') projetos.add(item.tipoProjeto);
+            if (item.listaMaterial && item.listaMaterial !== 'N/D') listasMaterial.add(item.listaMaterial);
+        });
+        
+        // Preencher os selects
+        const selectCliente = document.getElementById('filtroClienteRecebidos');
+        const selectFornecedor = document.getElementById('filtroFornecedorRecebidos');
+        const selectProjeto = document.getElementById('filtroProjetoRecebidos');
+        const selectLista = document.getElementById('filtroListaMaterialRecebidos');
+        
+        // Limpar selects
+        selectCliente.innerHTML = '<option value="">Todos os Clientes</option>';
+        selectFornecedor.innerHTML = '<option value="">Todos os Fornecedores</option>';
+        selectProjeto.innerHTML = '<option value="">Todos os Projetos</option>';
+        selectLista.innerHTML = '<option value="">Todas as Listas</option>';
+        
+        // Preencher opções
+        [...clientes].sort().forEach(cliente => {
+            selectCliente.innerHTML += `<option value="${cliente}">${cliente}</option>`;
+        });
+        
+        [...fornecedores].sort().forEach(fornecedor => {
+            selectFornecedor.innerHTML += `<option value="${fornecedor}">${fornecedor}</option>`;
+        });
+        
+        [...projetos].sort().forEach(projeto => {
+            selectProjeto.innerHTML += `<option value="${projeto}">${projeto}</option>`;
+        });
+        
+        [...listasMaterial].sort().forEach(lista => {
+            selectLista.innerHTML += `<option value="${lista}">${lista}</option>`;
+        });
+        
+        // Adicionar eventos de change aos selects
+        selectCliente.addEventListener('change', () => this.filtrarItensRecebidos());
+        selectFornecedor.addEventListener('change', () => this.filtrarItensRecebidos());
+        selectProjeto.addEventListener('change', () => this.filtrarItensRecebidos());
+        selectLista.addEventListener('change', () => this.filtrarItensRecebidos());
+    }
+    
+    // Filtrar itens recebidos com base nos filtros selecionados
+    filtrarItensRecebidos() {
+        const filtroCliente = document.getElementById('filtroClienteRecebidos').value;
+        const filtroFornecedor = document.getElementById('filtroFornecedorRecebidos').value;
+        const filtroProjeto = document.getElementById('filtroProjetoRecebidos').value;
+        const filtroLista = document.getElementById('filtroListaMaterialRecebidos').value;
+        
+        const itensFiltrados = this.itensRecebidosCache.filter(item => {
+            // Aplicar todos os filtros ativos
+            if (filtroCliente && item.clienteNome !== filtroCliente) return false;
+            if (filtroFornecedor && item.fornecedor !== filtroFornecedor) return false;
+            if (filtroProjeto && item.tipoProjeto !== filtroProjeto) return false;
+            if (filtroLista && item.listaMaterial !== filtroLista) return false;
+            
+            return true;
+        });
+        
+        this.renderizarTabelaRecebidos(itensFiltrados, false); // false para não atualizar os filtros
+    }
+    
+    renderizarTabelaRecebidos(itensRecebidos, atualizarFiltros = true) {
+        const tbody = document.getElementById('tabelaRecebidosBody');
+        
+        // Se é a chamada inicial (não vinda do filtro), armazenar cache e preencher filtros
+        if (atualizarFiltros) {
+            this.itensRecebidosCache = itensRecebidos;
+            this.preencherFiltrosModalRecebidos(itensRecebidos);
+        }
+        
+        if (itensRecebidos.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="10" class="px-4 py-8 text-center text-gray-500">
+                        Nenhum item recebido encontrado
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        // Ordenar por data de recebimento (mais recentes primeiro)
+        itensRecebidos.sort((a, b) => {
+            return new Date(b.dataRecebimento) - new Date(a.dataRecebimento);
+        });
+        
+        let html = '';
+        
+        itensRecebidos.forEach(item => {
+            const tipoClass = item.tipoCompra === 'Final' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800';
+            
+            html += `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${tipoClass}">
+                            ${item.tipoCompra}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">
+                        ${item.clienteNome}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-700">
+                        ${item.codigo}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-700">
+                        ${item.descricao}
+                    </td>
+                    <td class="px-4 py-3 text-sm font-semibold text-gray-900">
+                        ${this.formatarQuantidade(item.qtdRecebida)}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-700">
+                        ${item.fornecedor}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-700">
+                        ${item.tipoProjeto}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-700">
+                        ${item.listaMaterial}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-700">
+                        ${item.prazoEntrega}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-700">
+                        ${item.dataRecebimento}
+                    </td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+    }
+    
+    fecharModalRecebidos() {
+        document.getElementById('modalRecebidos').classList.add('hidden');
+        
+        // Resetar filtros ao fechar o modal
+        if (document.getElementById('filtroClienteRecebidos')) {
+            document.getElementById('filtroClienteRecebidos').value = '';
+            document.getElementById('filtroFornecedorRecebidos').value = '';
+            document.getElementById('filtroProjetoRecebidos').value = '';
+            document.getElementById('filtroListaMaterialRecebidos').value = '';
+        }
+    }
+    
+    // ============================================================================
     // UTILITÁRIOS
     // ============================================================================
 
-    mostrarLoading() {
-        document.getElementById('loadingState').classList.remove('hidden');
+    mostrarLoading(mensagem = 'Carregando...') {
+        const loadingState = document.getElementById('loadingState');
+        
+        // Se tiver um elemento específico para o texto do loading, atualizá-lo
+        const textElement = loadingState.querySelector('p');
+        if (textElement) {
+            textElement.textContent = mensagem;
+        }
+        
+        loadingState.classList.remove('hidden');
     }
 
     esconderLoading() {

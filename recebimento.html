@@ -136,6 +136,10 @@
                         </svg>
                         Ver Recebido
                     </button>
+                    <button id="btnEditar" disabled class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        Editar
+                    </button>
                     <button id="btnRegistrarRecebimento" disabled 
                             class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
                         Registrar Recebimento
@@ -419,6 +423,46 @@
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Edição -->
+    <div id="modalEdicao" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Editar Itens Selecionados</h3>
+                </div>
+                <div class="p-6">
+                    <p class="text-sm text-gray-600 mb-4">Preencha apenas os campos que deseja alterar para os <strong id="editTotalSelecionados">0</strong> itens selecionados. Campos deixados em branco não serão alterados.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="editQtdPendente" class="block text-sm font-medium text-gray-700">Qtd. Pendente</label>
+                            <input type="number" id="editQtdPendente" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Manter valor atual">
+                        </div>
+                        <div>
+                            <label for="editFornecedor" class="block text-sm font-medium text-gray-700">Fornecedor</label>
+                            <input type="text" id="editFornecedor" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Manter valor atual">
+                        </div>
+                        <div>
+                            <label for="editProjeto" class="block text-sm font-medium text-gray-700">Projeto</label>
+                            <input type="text" id="editProjeto" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Manter valor atual">
+                        </div>
+                        <div>
+                            <label for="editListaMaterial" class="block text-sm font-medium text-gray-700">Lista de Material</label>
+                            <input type="text" id="editListaMaterial" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Manter valor atual">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="editPrazoEntrega" class="block text-sm font-medium text-gray-700">Prazo de Entrega</label>
+                            <input type="date" id="editPrazoEntrega" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+                    <button id="btnCancelarEdicao" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md">Cancelar</button>
+                    <button id="btnSalvarEdicao" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md">Salvar Alterações</button>
                 </div>
             </div>
         </div>

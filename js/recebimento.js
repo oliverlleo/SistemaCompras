@@ -432,6 +432,19 @@ class RecebimentoManager {
         document.getElementById('btnSalvarRecebimento').addEventListener('click', () => {
             this.salvarRecebimento();
         });
+
+        // Edição
+        document.getElementById('btnEditar').addEventListener('click', () => {
+            this.abrirModalEdicao();
+        });
+
+        document.getElementById('btnCancelarEdicao').addEventListener('click', () => {
+            this.fecharModalEdicao();
+        });
+
+        document.getElementById('btnSalvarEdicao').addEventListener('click', () => {
+            this.salvarEdicao();
+        });
     }
 
     // ============================================================================
@@ -1094,6 +1107,7 @@ class RecebimentoManager {
         
         // Habilitar/desabilitar botão
         document.getElementById('btnRegistrarRecebimento').disabled = totalSelecionados === 0;
+        document.getElementById('btnEditar').disabled = totalSelecionados === 0;
         
         // Atualizar texto do botão
         const btnSelecionar = document.getElementById('btnSelecionarTodos');
@@ -1112,6 +1126,114 @@ class RecebimentoManager {
         const totalItens = document.querySelectorAll('.item-checkbox').length;
         const todosSeleecionados = checkboxesSelecionados.length === totalItens && totalItens > 0;
         this.selecionarTodos(!todosSeleecionados);
+    }
+
+    // ============================================================================
+    // MODAL DE EDIÇÃO
+    // ============================================================================
+
+    abrirModalEdicao() {
+        // Coletar itens selecionados
+        this.itensSelecionados = [];
+        document.querySelectorAll('.item-checkbox:checked').forEach(checkbox => {
+            const index = parseInt(checkbox.dataset.index);
+            this.itensSelecionados.push(this.itensFiltrados[index]);
+        });
+
+        if (this.itensSelecionados.length === 0) {
+            return;
+        }
+
+        const modal = document.getElementById('modalEdicao');
+        const totalSelecionadosEl = document.getElementById('editTotalSelecionados');
+        const qtdPendenteInput = document.getElementById('editQtdPendente');
+        const fornecedorInput = document.getElementById('editFornecedor');
+        const projetoInput = document.getElementById('editProjeto');
+        const listaMaterialInput = document.getElementById('editListaMaterial');
+        const prazoEntregaInput = document.getElementById('editPrazoEntrega');
+
+        // Limpar formulário
+        qtdPendenteInput.value = '';
+        fornecedorInput.value = '';
+        projetoInput.value = '';
+        listaMaterialInput.value = '';
+        prazoEntregaInput.value = '';
+
+        totalSelecionadosEl.textContent = this.itensSelecionados.length;
+
+        // Preencher se for apenas 1 item
+        if (this.itensSelecionados.length === 1) {
+            const item = this.itensSelecionados[0];
+            qtdPendenteInput.value = item.qtdePendenteRecebimento;
+            fornecedorInput.value = item.fornecedor || '';
+            projetoInput.value = item.tipoProjeto || '';
+            listaMaterialInput.value = item.listaMaterial || '';
+            prazoEntregaInput.value = item.prazoEntrega || '';
+        } else {
+            // Placeholders para múltiplos valores
+            qtdPendenteInput.placeholder = 'Múltiplos Valores';
+            fornecedorInput.placeholder = 'Múltiplos Valores';
+            projetoInput.placeholder = 'Múltiplos Valores';
+            listaMaterialInput.placeholder = 'Múltiplos Valores';
+        }
+
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    fecharModalEdicao() {
+        document.getElementById('modalEdicao').classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
+
+    async salvarEdicao() {
+        const updateData = {};
+
+        const qtdPendente = document.getElementById('editQtdPendente').value;
+        const fornecedor = document.getElementById('editFornecedor').value.trim();
+        const projeto = document.getElementById('editProjeto').value.trim();
+        const listaMaterial = document.getElementById('editListaMaterial').value.trim();
+        const prazoEntrega = document.getElementById('editPrazoEntrega').value;
+
+        if (qtdPendente) updateData.qtdePendenteRecebimento = Number(qtdPendente);
+        if (fornecedor) updateData.fornecedor = fornecedor;
+        if (projeto) updateData.tipoProjeto = projeto;
+        if (listaMaterial) updateData.listaMaterial = listaMaterial;
+        if (prazoEntrega) updateData.prazoEntrega = prazoEntrega;
+
+        if (Object.keys(updateData).length === 0) {
+            alert('Nenhum campo foi preenchido para alteração.');
+            return;
+        }
+
+        this.mostrarLoading('Salvando alterações...');
+
+        try {
+            const batch = this.db.batch();
+
+            this.itensSelecionados.forEach(item => {
+                const docRef = this.db.collection('itens').doc(item.id);
+                batch.update(docRef, updateData);
+            });
+
+            await batch.commit();
+
+            alert('Itens atualizados com sucesso!');
+            this.fecharModalEdicao();
+
+            // Recarregar dados
+            if (window.recebimentoFinalManager) {
+                await window.recebimentoFinalManager.carregarItensCombinados();
+            } else {
+                await this.carregarItensPendentes();
+            }
+
+        } catch (error) {
+            console.error("Erro ao salvar edição em lote: ", error);
+            alert('Ocorreu um erro ao salvar as alterações. Tente novamente.');
+        } finally {
+            this.esconderLoading();
+        }
     }
 
     // ============================================================================

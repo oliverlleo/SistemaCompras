@@ -63,9 +63,6 @@ class RecebimentoFinalManager {
             if (this.recebimentoOriginal && this.recebimentoOriginal.db) {
                 console.log('✅ RecebimentoManager original encontrado!');
                 
-                // Modificar a tabela para adicionar coluna de tipo de compra
-                this.adicionarColunaTipo();
-                
                 // Estender funcionalidades
                 this.estenderFuncionalidades();
                 
@@ -80,43 +77,6 @@ class RecebimentoFinalManager {
         
         // Iniciar tentativas
         tentarConectar();
-    }
-
-    /**
-     * Adiciona a coluna "Tipo" na tabela de recebimento
-     */
-    adicionarColunaTipo() {
-        try {
-            // Adicionar coluna de tipo na tabela principal
-            const headerRow = document.querySelector('#tabelaContainer table thead tr');
-            if (headerRow && !headerRow.querySelector('.tipo-coluna')) {
-                const tipoColumn = document.createElement('th');
-                tipoColumn.className = 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider tipo-coluna';
-                tipoColumn.textContent = 'Tipo';
-                
-                // Inserir antes da coluna de cliente (segunda posição)
-                headerRow.insertBefore(tipoColumn, headerRow.children[1]);
-                
-                console.log('✅ Coluna de tipo adicionada na tabela principal');
-            }
-            
-            // Adicionar coluna de tipo na tabela do modal de recebimento
-            const modalTable = document.querySelector('#corpoTabelaRecebimento').closest('table');
-            const modalHeaderRow = modalTable.querySelector('thead tr');
-            if (modalHeaderRow && !modalHeaderRow.querySelector('.tipo-coluna-modal')) {
-                const tipoModalColumn = document.createElement('th');
-                tipoModalColumn.className = 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider tipo-coluna-modal';
-                tipoModalColumn.textContent = 'Tipo';
-                
-                // Inserir depois da coluna de código (primeira posição)
-                modalHeaderRow.insertBefore(tipoModalColumn, modalHeaderRow.children[1]);
-                
-                console.log('✅ Coluna de tipo adicionada na tabela do modal');
-            }
-            
-        } catch (error) {
-            console.error('❌ Erro ao adicionar coluna de tipo:', error);
-        }
     }
 
     /**

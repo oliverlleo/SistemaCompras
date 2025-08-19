@@ -136,6 +136,10 @@
                         </svg>
                         Ver Recebido
                     </button>
+                    <button id="btnEditar" disabled class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        Editar
+                    </button>
                     <button id="btnRegistrarRecebimento" disabled 
                             class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
                         Registrar Recebimento
@@ -419,6 +423,39 @@
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalEdicao" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-900">Editar Itens Selecionados</h3>
+                </div>
+                <div class="p-6 flex-grow overflow-y-auto">
+                    <div class="overflow-x-auto">
+                        <table class="w-full table-auto">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
+                                    <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
+                                    <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-28">Qtd. Pendente</th>
+                                    <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-40">Fornecedor</th>
+                                    <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-40">Projeto</th>
+                                    <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-40">Lista Material</th>
+                                    <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-40">Prazo Entrega</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaEdicaoBody" class="bg-white divide-y divide-gray-200">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+                    <button id="btnCancelarEdicao" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md">Cancelar</button>
+                    <button id="btnSalvarEdicao" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md">Salvar Alterações</button>
                 </div>
             </div>
         </div>

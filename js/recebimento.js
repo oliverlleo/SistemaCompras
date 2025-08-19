@@ -432,6 +432,10 @@ class RecebimentoManager {
         document.getElementById('btnSalvarRecebimento').addEventListener('click', () => {
             this.salvarRecebimento();
         });
+
+        document.getElementById('btnEditar').addEventListener('click', () => this.abrirModalEdicao());
+        document.getElementById('btnSalvarEdicao').addEventListener('click', () => this.salvarEdicao());
+        document.getElementById('btnCancelarEdicao').addEventListener('click', () => this.fecharModalEdicao());
     }
 
     // ============================================================================
@@ -1094,6 +1098,10 @@ class RecebimentoManager {
         
         // Habilitar/desabilitar botão
         document.getElementById('btnRegistrarRecebimento').disabled = totalSelecionados === 0;
+        const btnEditar = document.getElementById('btnEditar');
+        if (btnEditar) {
+            btnEditar.disabled = totalSelecionados === 0;
+        }
         
         // Atualizar texto do botão
         const btnSelecionar = document.getElementById('btnSelecionarTodos');
@@ -1113,6 +1121,127 @@ class RecebimentoManager {
         const todosSeleecionados = checkboxesSelecionados.length === totalItens && totalItens > 0;
         this.selecionarTodos(!todosSeleecionados);
     }
+
+    // ============================================================================
+    // MODAL DE EDIÇÃO
+    // ============================================================================
+
+    abrirModalEdicao() {
+        this.itensSelecionados = [];
+        document.querySelectorAll('.item-checkbox:checked').forEach(checkbox => {
+            const index = parseInt(checkbox.dataset.index);
+            this.itensSelecionados.push(this.itensFiltrados[index]);
+        });
+
+        if (this.itensSelecionados.length === 0) {
+            return;
+        }
+
+        const tbody = document.getElementById('tabelaEdicaoBody');
+        tbody.innerHTML = '';
+
+        this.itensSelecionados.forEach(item => {
+            const rowHTML = `
+                <tr data-item-id="${item.id}">
+                    <td class="px-2 py-2 text-sm text-gray-700">${item.codigo || ''}</td>
+                    <td class="px-2 py-2 text-sm text-gray-700">${item.produtoDescricao || item.descricao || ''}</td>
+                    <td class="px-2 py-2">
+                        <input type="number" value="${item.qtdePendenteRecebimento || 0}" data-field="qtdePendenteRecebimento" class="w-full px-2 py-1 border border-gray-300 rounded-md text-sm">
+                    </td>
+                    <td class="px-2 py-2">
+                        <input type="text" value="${item.fornecedor || ''}" data-field="fornecedor" class="w-full px-2 py-1 border border-gray-300 rounded-md text-sm">
+                    </td>
+                    <td class="px-2 py-2">
+                        <input type="text" value="${item.tipoProjeto || ''}" data-field="tipoProjeto" class="w-full px-2 py-1 border border-gray-300 rounded-md text-sm">
+                    </td>
+                    <td class="px-2 py-2">
+                        <input type="text" value="${item.listaMaterial || ''}" data-field="listaMaterial" class="w-full px-2 py-1 border border-gray-300 rounded-md text-sm">
+                    </td>
+                    <td class="px-2 py-2">
+                        <input type="date" value="${item.prazoEntrega || ''}" data-field="prazoEntrega" class="w-full px-2 py-1 border border-gray-300 rounded-md text-sm">
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += rowHTML;
+        });
+
+        document.getElementById('modalEdicao').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    fecharModalEdicao() {
+        document.getElementById('modalEdicao').classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
+
+    async salvarEdicao() {
+        const batch = this.db.batch();
+        const rows = document.querySelectorAll('#tabelaEdicaoBody tr');
+        let hasChanges = false;
+
+        this.mostrarLoading('Salvando alterações...');
+
+        try {
+            for (const row of rows) {
+                const itemId = row.dataset.itemId;
+                const originalItem = this.itensPendentes.find(item => item.id === itemId);
+                if (!originalItem) continue;
+
+                const updateData = {};
+
+                const newQtd = row.querySelector('[data-field="qtdePendenteRecebimento"]').value;
+                if (Number(newQtd) !== originalItem.qtdePendenteRecebimento) {
+                    updateData.qtdePendenteRecebimento = Number(newQtd);
+                }
+
+                const newFornecedor = row.querySelector('[data-field="fornecedor"]').value;
+                if (newFornecedor !== (originalItem.fornecedor || '')) {
+                    updateData.fornecedor = newFornecedor;
+                }
+
+                const newProjeto = row.querySelector('[data-field="tipoProjeto"]').value;
+                if (newProjeto !== (originalItem.tipoProjeto || '')) {
+                    updateData.tipoProjeto = newProjeto;
+                }
+
+                const newLista = row.querySelector('[data-field="listaMaterial"]').value;
+                if (newLista !== (originalItem.listaMaterial || '')) {
+                    updateData.listaMaterial = newLista;
+                }
+
+                const newPrazo = row.querySelector('[data-field="prazoEntrega"]').value;
+                if (newPrazo !== (originalItem.prazoEntrega || '')) {
+                    updateData.prazoEntrega = newPrazo;
+                }
+
+                if (Object.keys(updateData).length > 0) {
+                    hasChanges = true;
+                    const docRef = this.db.collection('itens').doc(itemId);
+                    batch.update(docRef, updateData);
+                }
+            }
+
+            if (hasChanges) {
+                await batch.commit();
+                alert('Alterações salvas com sucesso!');
+                this.fecharModalEdicao();
+                if (window.recebimentoFinalManager) {
+                    await window.recebimentoFinalManager.carregarItensCombinados();
+                } else {
+                    await this.carregarItensPendentes();
+                }
+            } else {
+                alert('Nenhuma alteração foi detectada.');
+                this.fecharModalEdicao();
+            }
+        } catch (error) {
+            console.error('Erro ao salvar edições:', error);
+            alert('Ocorreu um erro ao salvar as alterações. Tente novamente.');
+        } finally {
+            this.esconderLoading();
+        }
+    }
+
 
     // ============================================================================
     // MODAL DE RECEBIMENTO

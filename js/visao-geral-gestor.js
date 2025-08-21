@@ -107,20 +107,29 @@ class VisaoGeralGestor {
 
         const resultado = {};
 
-        // Etapa 1: Compra Inicial
-        // Lógica CORRIGIDA: Esta etapa só se aplica a itens que realmente precisam ser comprados.
-        const itensParaCompraInicial = itens.filter(i => (i.quantidadeComprar || 0) > 0);
-        if (itensParaCompraInicial.length > 0) {
-            const itensCompraInicialConcluido = itensParaCompraInicial.filter(i => (i.qtdeComprada || 0) > 0);
-            resultado['Compra Inicial'] = {
-                total: itensParaCompraInicial.length,
-                concluido: itensCompraInicialConcluido,
-                pendente: itensParaCompraInicial.filter(i => !itensCompraInicialConcluido.includes(i)),
-            };
-        } else {
-            // Se nenhum item precisava ser comprado, a etapa é N/A.
-            resultado['Compra Inicial'] = null; // Será tratado como N/A na renderização
-        }
+    // No arquivo js/visao-geral-gestor.js, dentro do método calcularStatusDaLista(itens)
+
+    // Substitua o bloco antigo da "Compra Inicial" por este:
+    // ==========================================================
+
+    // Etapa 1: Compra Inicial
+    // LÓGICA CORRIGIDA: Esta etapa só se aplica a itens que realmente precisam ser comprados.
+    const itensParaCompraInicial = itens.filter(i => (i.quantidadeComprar || 0) > 0);
+    if (itensParaCompraInicial.length > 0) {
+        // Se existem itens que precisam de compra, calculamos o status.
+        const itensCompraInicialConcluido = itensParaCompraInicial.filter(i => (i.qtdeComprada || 0) > 0);
+        resultado['Compra Inicial'] = {
+            total: itensParaCompraInicial.length,
+            concluido: itensCompraInicialConcluido,
+            pendente: itensParaCompraInicial.filter(i => !itensCompraInicialConcluido.includes(i)),
+        };
+    } else {
+        // Se nenhum item na lista de material precisava ser comprado (todos vieram do estoque),
+        // a etapa inteira é marcada como "Não se Aplica".
+        resultado['Compra Inicial'] = null; // Será tratado como N/A na renderização.
+    }
+
+    // ==========================================================
 
         // Etapa 2: Recebimento Inicial
         const itensParaRecebimentoInicial = itens.filter(i => (i.qtdeComprada || 0) > 0);

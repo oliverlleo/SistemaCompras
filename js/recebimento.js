@@ -744,7 +744,7 @@ class RecebimentoManager {
                 <td class="px-4 py-3 text-sm text-gray-900">${item.codigo || '-'}</td>
                 <td class="px-4 py-3 text-sm text-gray-900">${item.descricao || '-'}</td>
                 <td class="px-4 py-3 text-sm text-gray-900 font-medium">${item.qtdePendenteRecebimento || 0}</td>
-                <td class="px-4 py-3 text-sm text-gray-900">${item.nomeCliente || '-'}</td>
+                <td class="px-4 py-3 text-sm text-gray-900">${item.clienteNome || '-'}</td>
                 <td class="px-4 py-3 text-sm text-gray-900">${item.listaMaterial || '-'}</td>
                 <td class="px-4 py-3 text-sm ${statusColor} font-medium">${statusText}</td>
             `;

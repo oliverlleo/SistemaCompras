@@ -1026,6 +1026,12 @@ class RecebimentoManager {
                 <td class="px-4 py-3 text-sm text-gray-700">
                     ${item.produtoDescricao || item.descricao || 'N/A'}
                 </td>
+                <td class="px-4 py-3 text-sm text-gray-700">
+                    ${item.cor || 'N/A'}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-700">
+                    ${item.medida || 'N/A'}
+                </td>
                 <td class="px-4 py-3 text-sm font-semibold text-gray-900">
                     ${this.formatarQuantidade(item.qtdePendenteRecebimento)}
                     ${isRecebimentoParcial ? '<span class="ml-2 inline-block bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full text-xs font-medium">Parcial</span>' : ''}

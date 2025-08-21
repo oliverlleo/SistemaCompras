@@ -107,33 +107,27 @@ class VisaoGeralGestor {
 
         const resultado = {};
 
-    // No arquivo js/visao-geral-gestor.js, dentro do método calcularStatusDaLista(itens)
+    // **LÓGICA UNIFICADA E CORRIGIDA PARA COMPRA E RECEBIMENTO INICIAL**
 
-    // Substitua o bloco antigo da "Compra Inicial" por este:
-    // ==========================================================
+    // 1. Definir o Universo Unificado: Itens que de fato entraram no fluxo de compra.
+    const itensParaCompraERecebimento = itens.filter(i => (i.qtdeComprada || 0) > 0);
 
     // Etapa 1: Compra Inicial
-    // LÓGICA CORRIGIDA: Esta etapa só se aplica a itens que realmente precisam ser comprados.
-    const itensParaCompraInicial = itens.filter(i => (i.quantidadeComprar || 0) > 0);
-    if (itensParaCompraInicial.length > 0) {
-        // Se existem itens que precisam de compra, calculamos o status.
-        const itensCompraInicialConcluido = itensParaCompraInicial.filter(i => (i.qtdeComprada || 0) > 0);
+    if (itensParaCompraERecebimento.length > 0) {
+        // Se um item está neste universo, sua compra inicial está, por definição, concluída.
         resultado['Compra Inicial'] = {
-            total: itensParaCompraInicial.length,
-            concluido: itensCompraInicialConcluido,
-            pendente: itensParaCompraInicial.filter(i => !itensCompraInicialConcluido.includes(i)),
+            total: itensParaCompraERecebimento.length,
+            concluido: itensParaCompraERecebimento, // Todos são considerados concluídos
+            pendente: [],
         };
     } else {
-        // Se nenhum item na lista de material precisava ser comprado (todos vieram do estoque),
-        // a etapa inteira é marcada como "Não se Aplica".
-        resultado['Compra Inicial'] = null; // Será tratado como N/A na renderização.
+        // Se nenhum item foi comprado, a etapa não se aplica.
+        resultado['Compra Inicial'] = null;
     }
 
-    // ==========================================================
-
-        // Etapa 2: Recebimento Inicial
-        const itensParaRecebimentoInicial = itens.filter(i => (i.qtdeComprada || 0) > 0);
-        const itensRecebimentoInicialConcluido = itensParaRecebimentoInicial.filter(i => {
+    // Etapa 2: Recebimento Inicial
+    if (itensParaCompraERecebimento.length > 0) {
+        const itensRecebimentoInicialConcluido = itensParaCompraERecebimento.filter(i => {
             const comprado = i.qtdeComprada || 0;
             const recebido = (i.historicoRecebimentos || [])
                 .filter(r => r.tipoCompra !== 'Final' && r.tipoRecebimento !== 'Final')
@@ -141,10 +135,14 @@ class VisaoGeralGestor {
             return recebido >= comprado;
         });
         resultado['Recebimento Inicial'] = {
-            total: itensParaRecebimentoInicial.length,
+            total: itensParaCompraERecebimento.length,
             concluido: itensRecebimentoInicialConcluido,
-            pendente: itensParaRecebimentoInicial.filter(i => !itensRecebimentoInicialConcluido.includes(i)),
+            pendente: itensParaCompraERecebimento.filter(i => !itensRecebimentoInicialConcluido.includes(i)),
         };
+    } else {
+        // Se a compra não se aplicou, o recebimento também não.
+        resultado['Recebimento Inicial'] = null;
+    }
 
         // Etapa 3: Empenho
         const itensEmpenhados = itens.filter(i => i.statusItem === 'Empenhado');

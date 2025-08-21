@@ -1,8 +1,12 @@
 class VisaoGeralGestor {
     constructor() {
+        // Inicializa conexão com o Firestore
         this.db = firebase.firestore();
+
+        // Estrutura de dados para armazenar os dados agregados
         this.clientes = new Map();
 
+        // Mapeamento de elementos do DOM
         this.loadingState = document.getElementById('loading-state');
         this.emptyState = document.getElementById('empty-state');
         this.clientesContainer = document.getElementById('clientes-container');
@@ -15,6 +19,9 @@ class VisaoGeralGestor {
         this.init();
     }
 
+    /**
+     * Orquestra a inicialização do dashboard.
+     */
     async init() {
         try {
             this.setupEventListeners();
@@ -26,6 +33,9 @@ class VisaoGeralGestor {
         }
     }
 
+    /**
+     * Configura os event listeners da página, como o fechamento do modal.
+     */
     setupEventListeners() {
         this.modalCloseBtn.addEventListener('click', () => this.closeModal());
         this.modal.addEventListener('click', (e) => {
@@ -35,11 +45,17 @@ class VisaoGeralGestor {
         });
     }
 
+    /**
+     * Exibe uma mensagem de erro na tela.
+     */
     showError(message) {
         this.loadingState.classList.add('hidden');
         this.clientesContainer.innerHTML = `<div class="card p-8 text-center bg-red-50 text-red-700">${message}</div>`;
     }
 
+    /**
+     * Carrega e processa todos os dados necessários do Firestore.
+     */
     async carregarDados() {
         const [pedidosSnapshot, itensSnapshot] = await Promise.all([
             this.db.collection('pedidos').get(),
@@ -81,6 +97,11 @@ class VisaoGeralGestor {
         });
     }
 
+    /**
+     * **[LÓGICA CORRIGIDA E DETALHADA]**
+     * Calcula o status de todas as 6 etapas para uma dada lista de itens,
+     * seguindo as regras de negócio aprovadas.
+     */
     calcularStatusDaLista(itens) {
         if (!itens || itens.length === 0) return {};
 
@@ -163,7 +184,7 @@ class VisaoGeralGestor {
             return `<span class="status-badge status-na">N/A</span>`;
         }
 
-        const { total, concluido, pendente } = dadosEtapa;
+        const { total, concluido } = dadosEtapa;
         let status, classe, icone;
 
         if (concluido.length >= total) {
@@ -180,14 +201,10 @@ class VisaoGeralGestor {
             icone = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>`;
         }
 
-        // Prepara os dados para o onclick do modal, escapando aspas
-        const dataPendenteStr = JSON.stringify(pendente).replace(/"/g, '&quot;');
-        const dataConcluidoStr = JSON.stringify(concluido).replace(/"/g, '&quot;');
+        const dataItens = JSON.stringify(dadosEtapa.pendente.concat(dadosEtapa.concluido));
 
-        // Renderiza o badge completo com a contagem e os onclicks
         return `<span class="status-badge ${classe}"
-                      onclick='window.visaoGeralGestor.mostrarDetalhes("${etapa}", this.dataset.itens, "pendente")'
-                      data-itens="${dataPendenteStr}">
+                      onclick='window.visaoGeralGestor.mostrarDetalhes("${etapa}", ${JSON.stringify(dataItens).replace(/"/g, "&quot;")})'>
                     ${icone} ${status} (${concluido.length}/${total})
                 </span>`;
     }
@@ -261,18 +278,16 @@ class VisaoGeralGestor {
         }
 
         this.clientesContainer.innerHTML = html;
-        window.visaoGeralGestor = this; // Expor globalmente para os onclicks
+        window.visaoGeralGestor = this;
     }
 
-    mostrarDetalhes(etapa, itensStr, tipoStatus) {
-        const itens = JSON.parse(itensStr);
-        this.modalTitle.textContent = `Detalhes: ${etapa} (${tipoStatus})`;
+    mostrarDetalhes(etapa, itensStr) {
+        const itens = (typeof itensStr === 'string') ? JSON.parse(itensStr) : itensStr;
+        this.modalTitle.textContent = `Detalhes: ${etapa}`;
 
-        let headers = ['Código', 'Descrição', 'Qtd. Necessária'];
+        let headers = ['Código', 'Descrição', 'Qtd. Necessária', 'Status'];
         if (etapa.includes('Recebimento')) {
-            headers.push('Qtd. Comprada', 'Qtd. Recebida', 'Último Recebimento');
-        } else if (etapa === 'Empenho') {
-            headers.push('Status Atual');
+            headers = ['Código', 'Descrição', 'Qtd. Comprada', 'Qtd. Recebida', 'Último Recebimento'];
         }
 
         this.modalTableHead.innerHTML = `<tr>${headers.map(h => `<th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">${h}</th>`).join('')}</tr>`;
@@ -282,7 +297,7 @@ class VisaoGeralGestor {
             bodyHtml = '<tr><td colspan="100%" class="text-center p-8 text-slate-500">Nenhum item para exibir.</td></tr>';
         } else {
             itens.forEach(item => {
-                let extraCols = '';
+                let extraCols = `<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${item.statusItem || 'Pendente'}</td>`;
                 if (etapa.includes('Recebimento')) {
                     const comprado = item.qtdeComprada || 0;
                     const recebido = (item.historicoRecebimentos || []).reduce((acc, r) => acc + (r.qtde || r.qtdeRecebida || 0), 0);
@@ -292,8 +307,6 @@ class VisaoGeralGestor {
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${recebido}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${ultimoRecebimento}</td>
                     `;
-                } else if (etapa === 'Empenho') {
-                    extraCols = `<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${item.statusItem || 'Pendente'}</td>`;
                 }
                 bodyHtml += `
                     <tr>

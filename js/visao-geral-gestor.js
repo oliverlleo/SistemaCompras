@@ -144,13 +144,30 @@ class VisaoGeralGestor {
         resultado['Recebimento Inicial'] = null;
     }
 
-        // Etapa 3: Empenho
-        const itensEmpenhados = itens.filter(i => i.statusItem === 'Empenhado');
-        resultado['Empenho'] = {
-            total: itens.length,
-            concluido: itensEmpenhados,
-            pendente: itens.filter(i => !itensEmpenhados.includes(i)),
-        };
+    // Etapa 3: Empenho
+    // LÓGICA CORRIGIDA: Diferencia itens pendentes de itens que estão prontos para a ação de empenhar.
+    const itensEmpenhados = itens.filter(i => i.statusItem === 'Empenhado');
+    const itensPendentesDeEmpenho = itens.filter(i => i.statusItem !== 'Empenhado');
+
+    // Para cada item pendente, verificamos se ele é "acionável" (tem saldo para empenhar)
+    const itensAcionaveis = itensPendentesDeEmpenho.filter(item => {
+        const totalEmpenhadoDoEstoque = (item.historicoEmpenhos || []).reduce((acc, emp) => acc + (emp.qtdeEmpenhadaDoEstoque || 0), 0);
+        const totalEmpenhadoDoRecebido = (item.historicoEmpenhos || []).reduce((acc, emp) => acc + (emp.qtdeEmpenhadaDoRecebido || 0), 0);
+
+        const saldoDisponivelEstoque = (item.estoqueDisponivel || 0); // Este campo já deve refletir o saldo real
+
+        const totalRecebido = (item.historicoRecebimentos || []).reduce((acc, rec) => acc + (rec.qtde || rec.qtdeRecebida || 0), 0);
+        const saldoDisponivelRecebido = totalRecebido - totalEmpenhadoDoRecebido;
+
+        return (saldoDisponivelEstoque > 0 || saldoDisponivelRecebido > 0);
+    });
+
+    resultado['Empenho'] = {
+        total: itens.length,
+        concluido: itensEmpenhados,
+        pendente: itensPendentesDeEmpenho,
+        acionaveis: itensAcionaveis, // Lista separada de itens que podem ser empenhados agora
+    };
 
         // Etapa 4: Compra Final
         const itensQuePrecisamCompraFinal = itens.filter(i => i.precisaCompraFinal === true);
@@ -198,7 +215,7 @@ class VisaoGeralGestor {
             return `<span class="status-badge status-na">N/A</span>`;
         }
 
-        const { total, concluido } = dadosEtapa;
+        const { total, concluido, pendente, acionaveis } = dadosEtapa;
         let status, classe, icone;
 
         if (concluido.length >= total) {
@@ -215,10 +232,19 @@ class VisaoGeralGestor {
             icone = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>`;
         }
 
-        const dataItens = JSON.stringify(dadosEtapa.pendente.concat(dadosEtapa.concluido));
+        // **MUDANÇA CRUCIAL AQUI**
+        // O onclick agora passa a lista de itens ACIONÁVEIS, não todos os pendentes.
+        const itensParaMostrar = (etapa === 'Empenho' && acionaveis) ? acionaveis : pendente;
+        const dataItens = JSON.stringify(itensParaMostrar);
+        const totalPendentes = pendente.length;
 
+        // Monta a string de dados para o onclick, escapando aspas.
+        const dataItensStr = dataItens.replace(/"/g, "&quot;");
+
+        // Adiciona um segundo data attribute para a contagem de pendentes.
         return `<span class="status-badge ${classe}"
-                      onclick='window.visaoGeralGestor.mostrarDetalhes("${etapa}", ${JSON.stringify(dataItens).replace(/"/g, "&quot;")})'>
+                      onclick='window.visaoGeralGestor.mostrarDetalhes("${etapa}", this.dataset.itens, ${totalPendentes})'
+                      data-itens="${dataItensStr}">
                     ${icone} ${status} (${concluido.length}/${total})
                 </span>`;
     }
@@ -295,33 +321,54 @@ class VisaoGeralGestor {
         window.visaoGeralGestor = this;
     }
 
-    mostrarDetalhes(etapa, itensStr) {
+    mostrarDetalhes(etapa, itensStr, totalPendentes) {
         const itens = (typeof itensStr === 'string') ? JSON.parse(itensStr) : itensStr;
         this.modalTitle.textContent = `Detalhes: ${etapa}`;
 
-        let headers = ['Código', 'Descrição', 'Qtd. Necessária', 'Status'];
+        let headers = ['Código', 'Descrição', 'Qtd. Necessária'];
+        // Lógica de cabeçalhos dinâmicos
         if (etapa.includes('Recebimento')) {
-            headers = ['Código', 'Descrição', 'Qtd. Comprada', 'Qtd. Recebida', 'Último Recebimento'];
+            headers.push('Qtd. Comprada', 'Qtd. Recebida');
+        } else if (etapa === 'Empenho') {
+            headers.push('Status Atual', 'Saldo Disponível');
+        } else {
+            headers.push('Status Atual');
         }
 
         this.modalTableHead.innerHTML = `<tr>${headers.map(h => `<th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">${h}</th>`).join('')}</tr>`;
 
         let bodyHtml = '';
-        if (!itens || itens.length === 0) {
-            bodyHtml = '<tr><td colspan="100%" class="text-center p-8 text-slate-500">Nenhum item para exibir.</td></tr>';
+
+        // **NOVA LÓGICA DE AVISO**
+        if (etapa === 'Empenho' && itens.length === 0 && totalPendentes > 0) {
+            bodyHtml = `<tr><td colspan="100%" class="text-center p-8 text-slate-500">
+                <div class="font-semibold text-slate-700">${totalPendentes} itens estão pendentes de empenho.</div>
+                <div>No entanto, nenhum deles possui saldo em estoque ou de recebimentos para ser empenhado neste momento.</div>
+            </td></tr>`;
+        } else if (!itens || itens.length === 0) {
+            bodyHtml = '<tr><td colspan="100%" class="text-center p-8 text-slate-500">Nenhum item para exibir nesta categoria.</td></tr>';
         } else {
             itens.forEach(item => {
                 let extraCols = `<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${item.statusItem || 'Pendente'}</td>`;
                 if (etapa.includes('Recebimento')) {
                     const comprado = item.qtdeComprada || 0;
                     const recebido = (item.historicoRecebimentos || []).reduce((acc, r) => acc + (r.qtde || r.qtdeRecebida || 0), 0);
-                    const ultimoRecebimento = (item.historicoRecebimentos || []).length > 0 ? new Date((item.historicoRecebimentos.slice(-1)[0].data)).toLocaleDateString('pt-BR') : 'N/A';
                     extraCols = `
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${comprado}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${recebido}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${ultimoRecebimento}</td>
+                    `;
+                } else if (etapa === 'Empenho') {
+                    const totalEmpenhadoDoRecebido = (item.historicoEmpenhos || []).reduce((acc, emp) => acc + (emp.qtdeEmpenhadaDoRecebido || 0), 0);
+                    const saldoDisponivelEstoque = (item.estoqueDisponivel || 0);
+                    const totalRecebido = (item.historicoRecebimentos || []).reduce((acc, rec) => acc + (rec.qtde || rec.qtdeRecebida || 0), 0);
+                    const saldoDisponivelRecebido = totalRecebido - totalEmpenhadoDoRecebido;
+                    const saldoTotal = saldoDisponivelEstoque + saldoDisponivelRecebido;
+                    extraCols = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${item.statusItem || 'Pendente'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">${saldoTotal}</td>
                     `;
                 }
+
                 bodyHtml += `
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${item.codigo}</td>

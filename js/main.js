@@ -559,3 +559,23 @@ app.fecharModal = function(modalId) {
 
 // Disponibilizar globalmente para debug
 window.PedidosApp = app;
+
+// Em js/main.js
+
+// ... código existente ...
+
+// ADICIONE ESTE BLOCO DE CÓDIGO
+// Event listener para o novo botão "Visão Geral do Gestor"
+const btnVisaoGeralGestor = document.getElementById('btnVisaoGeralGestor');
+if (btnVisaoGeralGestor) {
+    btnVisaoGeralGestor.addEventListener('click', () => {
+        const button = btnVisaoGeralGestor;
+        // Mostra um feedback visual de carregamento antes de navegar
+        button.innerHTML = '<div class="spinner h-5 w-5 border-2 border-white rounded-full animate-spin" style="border-top-color: transparent;"></div> Carregando...';
+        button.disabled = true;
+
+        setTimeout(() => {
+            window.location.href = './visao-geral-gestor.html';
+        }, 300); // Pequeno delay para o usuário ver o feedback
+    });
+}

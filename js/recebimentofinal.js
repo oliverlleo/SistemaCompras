@@ -849,6 +849,12 @@ class RecebimentoFinalManager {
                 <td class="px-4 py-3 text-sm text-gray-700">
                     ${item.produtoDescricao || item.descricao || 'N/A'}
                 </td>
+                <td class="px-4 py-3 text-sm text-gray-700">
+                    ${item.cor || 'N/A'}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-700">
+                    ${item.medida || 'N/A'}
+                </td>
                 <td class="px-4 py-3 text-sm font-semibold text-gray-900">
                     ${this.recebimentoOriginal.formatarQuantidade(item.qtdePendenteRecebimento)}
                 </td>

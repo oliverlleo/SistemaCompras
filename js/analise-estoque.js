@@ -909,6 +909,20 @@ class AnaliseEstoqueManager {
             // Declarar itemLocal no início para estar disponível em todo o escopo
             let itemLocal = null;
             
+            // INÍCIO DO NOVO CÓDIGO - ARQUITETO DE CÓDIGO
+            const itemLocalParaAnalise = this.itensPedido.find(i => i.id === itemId);
+            const analiseArray = itemLocalParaAnalise['Analise de Estoque'] || [];
+
+            // Verifica se "Precisamos" já foi gravado
+            const precisamosJaGravado = analiseArray.some(reg => reg.hasOwnProperty('Precisamos'));
+            if (!precisamosJaGravado) {
+                analiseArray.push({ 'Precisamos': qtdeNecessaria });
+            }
+
+            // Grava a quantidade a alocar
+            analiseArray.push({ 'Alocar': qtdeFaltante });
+            // FIM DO NOVO CÓDIGO - ARQUITETO DE CÓDIGO
+
             // Usar set com merge para funcionar mesmo se documento não existir
             const itemRef = db.collection('itens').doc(itemId);
             try {
@@ -932,7 +946,8 @@ class AnaliseEstoqueManager {
                     projetoNome: dadosPedidoPai.tipoProjeto || item.projetoNome,
                     tipoProjeto: dadosPedidoPai.tipoProjeto || item.tipoProjeto,
                     // 🎯 NOVA FUNCIONALIDADE: Flag para ocultar da análise quando completo
-                    ocultarDaAnalise: qtdeTotalProcessada >= qtdeNecessaria
+                    ocultarDaAnalise: qtdeTotalProcessada >= qtdeNecessaria,
+                    'Analise de Estoque': analiseArray // <-- ADICIONE ESTA LINHA EXATAMENTE AQUI
                 };
 
                 await itemRef.set(updateData, { merge: true });
@@ -1720,6 +1735,19 @@ class AnaliseEstoqueManager {
 
             console.log(`Processando item: Necessário=${qtdeNecessaria}, Comprar=${novaQtdeComprar}, Alocar=${qtdeAlocarExistente}, Total=${qtdeTotalProcessada}, Status=${novoStatus}`);
 
+            // INÍCIO DO NOVO CÓDIGO - ARQUITETO DE CÓDIGO
+            const analiseArrayCompra = item['Analise de Estoque'] || [];
+
+            // Verifica se "Precisamos" já foi gravado
+            const precisamosJaGravadoCompra = analiseArrayCompra.some(reg => reg.hasOwnProperty('Precisamos'));
+            if (!precisamosJaGravadoCompra) {
+                analiseArrayCompra.push({ 'Precisamos': qtdeNecessaria });
+            }
+
+            // Grava a quantidade a solicitar para compra
+            analiseArrayCompra.push({ 'SolicitarCompra': qtdeComprar });
+            // FIM DO NOVO CÓDIGO - ARQUITETO DE CÓDIGO
+
             // 🔧 GARANTIR HERANÇA DO PROJETO - Usar dados do pedido pai se disponível
             const setData = {
                 ...item, // Preserva todos os campos originais (descrição, especificações, etc.)
@@ -1738,7 +1766,8 @@ class AnaliseEstoqueManager {
                 projetoNome: dadosPedidoPai.tipoProjeto || item.projetoNome,
                 tipoProjeto: dadosPedidoPai.tipoProjeto || item.tipoProjeto,
                 // 🎯 NOVA FUNCIONALIDADE: Flag para ocultar da análise quando completo
-                ocultarDaAnalise: qtdeTotalProcessada >= qtdeNecessaria
+                ocultarDaAnalise: qtdeTotalProcessada >= qtdeNecessaria,
+                'Analise de Estoque': analiseArrayCompra // <-- ADICIONE ESTA LINHA EXATAMENTE AQUI
             };
 
             // Declarar itemLocal no início para estar disponível em todo o escopo

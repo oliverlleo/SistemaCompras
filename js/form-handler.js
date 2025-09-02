@@ -1,3 +1,6 @@
+import { database } from './firebase-config.js';
+import { ref, push, set } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
 // Manipulador de formulários e validações
 class FormHandler {
   constructor() {
@@ -304,5 +307,11 @@ class FormHandler {
   }
 }
 
-// Exportar para uso global
-window.FormHandler = FormHandler;
+  saveDataToFirebase(dataToSave, clienteNome, tipoProjeto) {
+    const projectRef = ref(database, `${clienteNome}/${tipoProjeto}`);
+    const novoPedidoRef = push(projectRef);
+    return set(novoPedidoRef, dataToSave);
+  }
+}
+
+export default FormHandler;

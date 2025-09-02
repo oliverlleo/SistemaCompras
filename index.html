@@ -12,12 +12,8 @@
     <!-- CSS customizado -->
     <link rel="stylesheet" href="./css/styles.css">
     
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    
     <!-- SheetJS para processamento de planilhas -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -339,124 +335,11 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="./js/firebase-config.js"></script>
-    <script src="./js/file-processor.js"></script>
-    <script src="./js/form-handler.js"></script>
-    <script src="./js/ui-manager.js"></script>
-    <script src="./js/dashboard-manager.js"></script>
-    <script src="./js/main.js"></script>
-
-    <!-- Script de inicialização -->
-    <script>
-        // Mostrar loading inicial
-        document.getElementById('loadingOverlay').classList.remove('hidden');
-        
-        // Aguardar carregamento completo
-        window.addEventListener('load', () => {
-            // Aguardar um momento para garantir que tudo foi carregado
-            setTimeout(() => {
-                document.getElementById('loadingOverlay').classList.add('hidden');
-                
-                // Inicializar dashboard
-                if (window.PedidosApp) {
-                    window.PedidosApp.initDashboard();
-                }
-                
-            }, 500);
-        });
-        
-        // Debug helper
-        window.debugPedidos = () => {
-            if (window.PedidosApp) {
-                console.log('Estado da aplicação:', window.PedidosApp.debug());
-                return window.PedidosApp.debug();
-            }
-            console.log('Aplicação não inicializada');
-            return null;
-        };
-        
-        // Detectar se é mobile e ajustar interface
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (isMobile) {
-            document.body.classList.add('mobile-device');
-        }
-
-        // Event listener para botão "Ver Código" (verificar se existe)
-        const btnViewCode = document.getElementById('btnViewCode');
-        if (btnViewCode) {
-            btnViewCode.addEventListener('click', () => {
-                window.open('./code-viewer.html', '_blank');
-            });
-        }
-
-        // Event listeners para dropdowns "Análise", "Separação" e "Compra"
-        const dropdowns = ['Analise', 'Separacao', 'Compra'];
-        
-        dropdowns.forEach(type => {
-            const btnDropdown = document.getElementById(`btn${type}`);
-            if (!btnDropdown) return; // Pular se o botão não existir
-            
-            const dropdownContainer = btnDropdown.closest('.dropdown-container');
-            if (!dropdownContainer) return; // Pular se o container não existir
-            
-            btnDropdown.addEventListener('click', (e) => {
-                e.preventDefault();
-                
-                // Fechar outros dropdowns
-                dropdowns.forEach(otherType => {
-                    if (otherType !== type) {
-                        const otherContainer = document.getElementById(`btn${otherType}`)?.closest('.dropdown-container');
-                        if (otherContainer) otherContainer.classList.remove('open');
-                    }
-                });
-                
-                // Alternar este dropdown
-                dropdownContainer.classList.toggle('open');
-            });
-        });
-        
-        // Fechar dropdowns ao clicar fora
-        document.addEventListener('click', (e) => {
-            const containers = document.querySelectorAll('.dropdown-container');
-            containers.forEach(container => {
-                if (!container.contains(e.target)) {
-                    container.classList.remove('open');
-                }
-            });
-        });
-
-        // Event listener para botão "Dashboard"
-        const btnDashboardCliente = document.getElementById('btnDashboardCliente');
-        if (btnDashboardCliente) {
-            btnDashboardCliente.addEventListener('click', () => {
-                window.location.href = './dashboard-cliente.html';
-            });
-        }
-
-        // Event listener para botão "Recebimento"
-        const btnRecebimento = document.getElementById('btnRecebimento');
-        if (btnRecebimento) {
-            btnRecebimento.addEventListener('click', () => {
-                window.location.href = './recebimento.html';
-            });
-        }
-
-        // Event listeners para "Compra Inicial" e "Compra Final"
-        const btnCompraInicial = document.getElementById('btnCompraInicial');
-        if (btnCompraInicial) {
-            btnCompraInicial.addEventListener('click', () => {
-                window.location.href = './gestao-compras.html';
-            });
-        }
-
-        const btnCompraFinal = document.getElementById('btnCompraFinal');
-        if (btnCompraFinal) {
-            btnCompraFinal.addEventListener('click', () => {
-                window.location.href = './compra-final.html';
-            });
-        }
-
-
-    </script>
+    <script type="module" src="js/firebase-config.js"></script>
+    <script type="module" src="js/file-processor.js"></script>
+    <script type="module" src="js/form-handler.js"></script>
+    <script type="module" src="js/ui-manager.js"></script>
+    <script type="module" src="js/dashboard-manager.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>

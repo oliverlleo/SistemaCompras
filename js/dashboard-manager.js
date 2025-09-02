@@ -1,3 +1,6 @@
+import { database } from './firebase-config.js';
+import { ref, onValue, remove } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
 // Gerenciador do Dashboard Principal
 class DashboardManager {
   constructor() {
@@ -198,18 +201,33 @@ class DashboardManager {
     try {
       this.showLoading(true);
       
-      const pedidos = await FirebaseService.buscarPedidos();
-      this.pedidos = pedidos;
-      
-      // Carregar listas de materiais para cada pedido
-      await this.loadListasMateriais();
-      
-      this.applyFilters();
+      const dbRef = ref(database);
+      onValue(dbRef, (snapshot) => {
+        const data = snapshot.val();
+        const pedidos = [];
+        if (data) {
+          for (const clienteNome in data) {
+            for (const tipoProjeto in data[clienteNome]) {
+              for (const pedidoId in data[clienteNome][tipoProjeto]) {
+                pedidos.push({
+                  id: pedidoId,
+                  clienteNome: clienteNome,
+                  tipoProjeto: tipoProjeto,
+                  ...data[clienteNome][tipoProjeto][pedidoId]
+                });
+              }
+            }
+          }
+        }
+
+        this.pedidos = pedidos;
+        this.applyFilters();
+        this.showLoading(false);
+      });
       
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error);
       this.showError('Erro ao carregar pedidos: ' + error.message);
-    } finally {
       this.showLoading(false);
     }
   }
@@ -769,17 +787,17 @@ class DashboardManager {
     }
 
     try {
-      // Excluir itens primeiro
-      const itens = await FirebaseService.buscarItensPedido(pedidoId);
-      await Promise.all(itens.map(item => 
-        FirebaseService.excluirItem(item.id)
-      ));
+      const pedido = this.pedidos.find(p => p.id === pedidoId);
+      if (!pedido) {
+        this.showError('Pedido não encontrado para exclusão.');
+        return;
+      }
 
-      // Excluir pedido
-      await FirebaseService.excluirPedido(pedidoId);
+      const { clienteNome, tipoProjeto } = pedido;
+      const pedidoRef = ref(database, `${clienteNome}/${tipoProjeto}/${pedidoId}`);
+      await remove(pedidoRef);
 
       this.showNotification('Pedido excluído com sucesso!', 'success');
-      await this.refreshData();
 
     } catch (error) {
       console.error('Erro ao excluir pedido:', error);
@@ -1558,5 +1576,4 @@ class DashboardManager {
   }
 }
 
-// Exportar para uso global
-window.DashboardManager = DashboardManager;
+export default DashboardManager;

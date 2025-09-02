@@ -12,10 +12,6 @@
     <!-- CSS customizado -->
     <link rel="stylesheet" href="./css/styles.css">
     
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    
     <style>
         .dashboard-cliente-container {
             min-height: 100vh;
@@ -601,16 +597,7 @@
 
 
     <!-- Scripts -->
-    <script src="./js/firebase-config.js"></script>
-    <script src="./js/dashboard-cliente.js"></script>
-
-    <script>
-        // Inicializar quando a página carregar
-        window.addEventListener('load', () => {
-            if (window.DashboardCliente) {
-                window.DashboardCliente.init();
-            }
-        });
-    </script>
+    <script type="module" src="./js/firebase-config.js"></script>
+    <script type="module" src="./js/dashboard-cliente.js"></script>
 </body>
 </html>

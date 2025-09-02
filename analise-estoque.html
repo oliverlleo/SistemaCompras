@@ -12,10 +12,6 @@
     <link rel="stylesheet" href="./css/styles.css">
     <link rel="stylesheet" href="./css/analise-estoque.css">
     
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    
     <!-- SheetJS para processamento de planilhas -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
@@ -195,59 +191,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="./js/firebase-config.js"></script>
-    <script src="./js/analise-estoque.js"></script>
-
-    <!-- Script de inicialização -->
-    <script>
-        // Mostrar loading inicial
-        document.getElementById('loadingOverlay').classList.remove('hidden');
-        
-        // Aguardar carregamento completo
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                document.getElementById('loadingOverlay').classList.add('hidden');
-            }, 500);
-        });
-        
-        // Debug helper específico para análise
-        window.debugAnalise = () => {
-            if (window.AnaliseEstoque) {
-                console.log('Estado da análise:', {
-                    pedidoSelecionado: window.AnaliseEstoque.pedidoSelecionado,
-                    listaMaterialSelecionada: window.AnaliseEstoque.listaMaterialSelecionada,
-                    itensPedido: window.AnaliseEstoque.itensPedido,
-                    mapaEstoque: window.AnaliseEstoque.mapaEstoque
-                });
-                return window.AnaliseEstoque;
-            }
-            console.log('Análise de estoque não inicializada');
-            return null;
-        };
-        
-        // Detectar dispositivo móvel
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (isMobile) {
-            document.body.classList.add('mobile-device');
-        }
-
-        // Teclas de atalho específicas para análise
-        document.addEventListener('keydown', (e) => {
-            // Ctrl + R = Resetar seleções
-            if (e.ctrlKey && e.key === 'r') {
-                e.preventDefault();
-                if (window.AnaliseEstoque && confirm('Resetar todas as seleções?')) {
-                    window.AnaliseEstoque.resetarSelecoes();
-                }
-            }
-            
-            // ESC = Voltar ao dashboard
-            if (e.key === 'Escape') {
-                if (confirm('Voltar ao dashboard? (Progresso não salvo será perdido)')) {
-                    window.location.href = 'index.html';
-                }
-            }
-        });
-    </script>
+    <script type="module" src="./js/firebase-config.js"></script>
+    <script type="module" src="./js/analise-estoque.js"></script>
 </body>
 </html>

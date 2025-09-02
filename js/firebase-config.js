@@ -27,43 +27,32 @@ db.enablePersistence().catch((err) => {
 
 // Funções para interagir com o Firestore
 const FirebaseService = {
-  // Salvar pedido principal
-  async salvarPedido(dadosPedido) {
+  // Salvar pedido principal (agora usando Realtime Database)
+  async salvarPedido(dadosPedido, allItems = []) {
     try {
-      const docRef = await db.collection('pedidos').add({
-        ...dadosPedido,
-        dataCriacao: firebase.firestore.FieldValue.serverTimestamp(),
-        statusGeral: 'Pendente de Análise'
-      });
-      
-      console.log('Pedido salvo com ID:', docRef.id);
-      return docRef.id;
-    } catch (error) {
-      console.error('Erro ao salvar pedido:', error);
-      throw error;
-    }
-  },
+      if (!dadosPedido.clienteNome || !dadosPedido.tipoProjeto) {
+        throw new Error("Nome do cliente ou tipo de projeto não pode estar vazio.");
+      }
 
-  // Salvar itens do pedido
-  async salvarItens(pedidoId, listaItens) {
-    try {
-      const batch = db.batch();
-      
-      listaItens.forEach(item => {
-        const itemRef = db.collection('itens').doc();
-        batch.set(itemRef, {
-          ...item,
-          pedidoId: pedidoId,
-          statusItem: 'Pendente de Análise',
-          dataCriacao: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      });
+      // Usando Realtime Database conforme instruído pelo usuário
+      const database = firebase.database();
+      const projectRef = database.ref(`${dadosPedido.clienteNome}/${dadosPedido.tipoProjeto}`);
 
-      await batch.commit();
-      console.log(`${listaItens.length} itens salvos com sucesso`);
-      return true;
+      const dadosDoPedidoParaSalvar = {
+        ...dadosPedido, // Mantém os dados do formulário
+        itens: allItems, // Incorpora a lista de itens diretamente
+        status: "Novo",
+        dataCriacao: firebase.database.ServerValue.TIMESTAMP // Timestamp para Realtime Database
+      };
+
+      // .push() cria um novo ID único para o pedido
+      const novoPedidoRef = await projectRef.push(dadosDoPedidoParaSalvar);
+
+      console.log('Pedido salvo com ID no Realtime Database:', novoPedidoRef.key);
+      return novoPedidoRef.key; // Retorna a chave do novo pedido
+
     } catch (error) {
-      console.error('Erro ao salvar itens:', error);
+      console.error('Erro ao salvar pedido no Realtime Database:', error);
       throw error;
     }
   },

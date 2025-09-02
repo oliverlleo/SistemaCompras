@@ -559,3 +559,106 @@ app.fecharModal = function(modalId) {
 
 // Disponibilizar globalmente para debug
 window.PedidosApp = app;
+
+// Substitua a função de carregamento de pedidos existente por esta:
+function carregarPedidos() {
+    // A referência agora é a raiz do banco de dados para ler todos os clientes.
+    const dbRef = firebase.database().ref();
+
+    dbRef.on('value', (snapshot) => {
+        const listaPedidos = document.getElementById('lista-pedidos');
+        listaPedidos.innerHTML = ''; // Limpa a tabela antes de preencher
+        let count = 0;
+
+        if (snapshot.exists()) {
+            // Nível 1: Iterar sobre cada cliente
+            snapshot.forEach((clienteSnapshot) => {
+                const clienteNome = clienteSnapshot.key;
+                const tiposProjeto = clienteSnapshot.val();
+
+                // Nível 2: Iterar sobre cada tipo de projeto do cliente
+                for (const tipoProjeto in tiposProjeto) {
+                    const pedidos = tiposProjeto[tipoProjeto];
+
+                    // Nível 3: Iterar sobre cada pedido dentro do tipo de projeto
+                    for (const pedidoId in pedidos) {
+                        const pedido = pedidos[pedidoId];
+                        count++;
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${count}</td>
+                            <td>${clienteNome}</td>
+                            <td>${tipoProjeto}</td>
+                            <td>${pedido.dataPedido || 'N/A'}</td>
+                            <td>${pedido.status || 'N/A'}</td>
+                            <td>${pedido.observacoes || ''}</td>
+                            <td>
+                                <button class="btn-edit"
+                                        data-cliente="${clienteNome}"
+                                        data-tipo-projeto="${tipoProjeto}"
+                                        data-pedido-id="${pedidoId}">
+                                    Editar
+                                </button>
+                                <button class="btn-delete"
+                                        data-cliente="${clienteNome}"
+                                        data-tipo-projeto="${tipoProjeto}"
+                                        data-pedido-id="${pedidoId}">
+                                    Excluir
+                                </button>
+                            </td>
+                        `;
+                        listaPedidos.appendChild(tr);
+                    }
+                }
+            });
+        } else {
+            listaPedidos.innerHTML = '<tr><td colspan="7">Nenhum pedido encontrado.</td></tr>';
+        }
+        document.getElementById('contador-pedidos').innerText = count;
+    });
+}
+
+// Garanta que esta função seja chamada quando a página carregar
+document.addEventListener('DOMContentLoaded', carregarPedidos);
+
+// Adicione este código em js/main.js para lidar com os cliques de edição e exclusão
+const listaPedidosTable = document.getElementById('lista-pedidos');
+
+listaPedidosTable.addEventListener('click', function(event) {
+    const target = event.target;
+    const cliente = target.dataset.cliente;
+    const tipoProjeto = target.dataset.tipoProjeto;
+    const pedidoId = target.dataset.pedidoId;
+
+    // Verifica se os dados necessários estão presentes
+    if (!cliente || !tipoProjeto || !pedidoId) {
+        return;
+    }
+
+    const pedidoRef = firebase.database().ref(`${cliente}/${tipoProjeto}/${pedidoId}`);
+
+    if (target.classList.contains('btn-delete')) {
+        // Lógica de Exclusão
+        if (confirm(`Tem certeza que deseja excluir o pedido de "${tipoProjeto}" do cliente "${cliente}"?`)) {
+            pedidoRef.remove()
+                .then(() => {
+                    console.log("Pedido excluído com sucesso.");
+                    alert("Pedido removido!");
+                })
+                .catch((error) => {
+                    console.error("Erro ao excluir pedido: ", error);
+                    alert("Falha ao remover o pedido.");
+                });
+        }
+    }
+
+    if (target.classList.contains('btn-edit')) {
+        // Lógica de Edição (exemplo: redirecionar para uma página de edição)
+        // Você precisará criar a página `editar-pedido.html`
+        // O caminho completo é passado como parâmetro na URL
+        const caminhoCompleto = `${cliente}/${tipoProjeto}/${pedidoId}`;
+        // A função btoa codifica o caminho para ser seguro na URL
+        window.location.href = `editar-pedido.html?ref=${btoa(caminhoCompleto)}`;
+    }
+});

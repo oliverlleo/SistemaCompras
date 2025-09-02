@@ -1087,9 +1087,13 @@ class UIManager {
       // Coletar dados
       const dadosPedido = this.collectFormData();
       
-      // Salvar pedido e itens no Firebase (agora em uma única chamada)
-      // A função salvarPedido foi refatorada para aceitar os itens e usar o Realtime Database
-      const pedidoId = await FirebaseService.salvarPedido(dadosPedido, this.allItems);
+      // Salvar pedido no Firebase
+      const pedidoId = await FirebaseService.salvarPedido(dadosPedido);
+
+      // Salvar itens se não for terceirizado
+      if (!dadosPedido.ehTerceirizado && this.allItems.length > 0) {
+        await FirebaseService.salvarItens(pedidoId, this.allItems);
+      }
 
       // Mostrar sucesso
       this.showNotification('Pedido cadastrado com sucesso!', 'success');

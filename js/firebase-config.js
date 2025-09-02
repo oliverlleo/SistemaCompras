@@ -1,224 +1,72 @@
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Importações do Firebase SDK v9+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+import { getDatabase, ref, set, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
+// Suas credenciais do Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyC2Zi40wsyBoTeXb2syXvrogTb56lAVjk0",
   authDomain: "pcp-2e388.firebaseapp.com",
   databaseURL: "https://pcp-2e388-default-rtdb.firebaseio.com",
   projectId: "pcp-2e388",
-  storageBucket: "pcp-2e388.firebasestorage.app",
+  storageBucket: "pcp-2e388.appspot.com",
   messagingSenderId: "725540904176",
-  appId: "1:725540904176:web:5b60009763c36bb12d7635",
-  measurementId: "G-G4S09PBEFB"
+  appId: "1:725540904176:web:5b60009763c36bb12d7635"
 };
 
-// Inicializar Firebase
-firebase.initializeApp(firebaseConfig);
+// Inicializa o Firebase
+const app = initializeApp(firebaseConfig);
 
-// Inicializar Firestore
-const db = firebase.firestore();
+// Inicializa o Realtime Database e obtém uma referência para o serviço
+const database = getDatabase(app);
 
-// Configurar para usar offline
-db.enablePersistence().catch((err) => {
-  if (err.code == 'failed-precondition') {
-    console.log('Múltiplas abas abertas, persistência desabilitada');
-  } else if (err.code == 'unimplemented') {
-    console.log('Browser não suporta persistência offline');
-  }
-});
-
-// Funções para interagir com o Firestore
-const FirebaseService = {
-  // Salvar pedido principal (agora usando Realtime Database)
-  async salvarPedido(dadosPedido, allItems = []) {
-    try {
-      if (!dadosPedido.clienteNome || !dadosPedido.tipoProjeto) {
-        throw new Error("Nome do cliente ou tipo de projeto não pode estar vazio.");
-      }
-
-      // Usando Realtime Database conforme instruído pelo usuário
-      const database = firebase.database();
-      const projectRef = database.ref(`${dadosPedido.clienteNome}/${dadosPedido.tipoProjeto}`);
-
-      const dadosDoPedidoParaSalvar = {
-        ...dadosPedido, // Mantém os dados do formulário
-        itens: allItems, // Incorpora a lista de itens diretamente
-        status: "Novo",
-        dataCriacao: firebase.database.ServerValue.TIMESTAMP // Timestamp para Realtime Database
-      };
-
-      // .push() cria um novo ID único para o pedido
-      const novoPedidoRef = await projectRef.push(dadosDoPedidoParaSalvar);
-
-      console.log('Pedido salvo com ID no Realtime Database:', novoPedidoRef.key);
-      return novoPedidoRef.key; // Retorna a chave do novo pedido
-
-    } catch (error) {
-      console.error('Erro ao salvar pedido no Realtime Database:', error);
-      throw error;
-    }
-  },
-
-  // Buscar todos os pedidos
-  async buscarPedidos() {
-    try {
-      const snapshot = await db.collection('pedidos')
-        .orderBy('dataCriacao', 'desc')
-        .get();
-      
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-    } catch (error) {
-      console.error('Erro ao buscar pedidos:', error);
-      throw error;
-    }
-  },
-
-  // Buscar itens de um pedido
-  async buscarItensPedido(pedidoId) {
-    try {
-      const snapshot = await db.collection('itens')
-        .where('pedidoId', '==', pedidoId)
-        .get();
-      
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-    } catch (error) {
-      console.error('Erro ao buscar itens do pedido:', error);
-      throw error;
-    }
-  },
-
-  // Excluir pedido
-  async excluirPedido(pedidoId) {
-    try {
-      await db.collection('pedidos').doc(pedidoId).delete();
-      console.log('Pedido excluído com sucesso:', pedidoId);
-      return true;
-    } catch (error) {
-      console.error('Erro ao excluir pedido:', error);
-      throw error;
-    }
-  },
-
-  // Excluir item
-  async excluirItem(itemId) {
-    try {
-      await db.collection('itens').doc(itemId).delete();
-      console.log('Item excluído com sucesso:', itemId);
-      return true;
-    } catch (error) {
-      console.error('Erro ao excluir item:', error);
-      throw error;
-    }
-  },
-
-  // Atualizar pedido
-  async atualizarPedido(pedidoId, dadosPedido) {
-    try {
-      await db.collection('pedidos').doc(pedidoId).update({
-        ...dadosPedido,
-        dataAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      
-      console.log('Pedido atualizado com sucesso:', pedidoId);
-      return true;
-    } catch (error) {
-      console.error('Erro ao atualizar pedido:', error);
-      throw error;
-    }
-  },
-
-  // Buscar pedidos com filtros
-  async buscarPedidosFiltrados(filtros = {}) {
-    try {
-      let query = db.collection('pedidos');
-
-      // Aplicar filtros
-      if (filtros.tipoProjeto) {
-        query = query.where('tipoProjeto', '==', filtros.tipoProjeto);
-      }
-
-      if (filtros.terceirizado !== undefined) {
-        query = query.where('ehTerceirizado', '==', filtros.terceirizado);
-      }
-
-      // Ordenação padrão
-      query = query.orderBy('dataCriacao', 'desc');
-
-      const snapshot = await query.get();
-      
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-    } catch (error) {
-      console.error('Erro ao buscar pedidos filtrados:', error);
-      throw error;
-    }
-  },
-
-  // Buscar pedidos por lista de material (consulta em duas etapas)
-  async buscarPedidosPorListaMaterial(listaMaterial) {
-    try {
-      // Primeiro: buscar itens que contêm a lista de material
-      const itensSnapshot = await db.collection('itens')
-        .where('listaMaterial', '==', listaMaterial)
-        .get();
-
-      if (itensSnapshot.empty) {
-        return [];
-      }
-
-      // Extrair IDs únicos dos pedidos
-      const pedidoIds = [...new Set(itensSnapshot.docs.map(doc => doc.data().pedidoId))];
-
-      // Segundo: buscar pedidos usando os IDs encontrados
-      // Firebase tem limite de 10 itens no operador 'in', então dividir se necessário
-      const pedidos = [];
-      for (let i = 0; i < pedidoIds.length; i += 10) {
-        const batch = pedidoIds.slice(i, i + 10);
-        const pedidosSnapshot = await db.collection('pedidos')
-          .where(firebase.firestore.FieldPath.documentId(), 'in', batch)
-          .get();
-        
-        pedidosSnapshot.docs.forEach(doc => {
-          pedidos.push({
-            id: doc.id,
-            ...doc.data()
-          });
-        });
-      }
-
-      return pedidos;
-    } catch (error) {
-      console.error('Erro ao buscar pedidos por lista de material:', error);
-      throw error;
-    }
-  },
-
-  // Buscar listas de materiais únicas
-  async buscarListasMateriais() {
-    try {
-      const snapshot = await db.collection('itens').get();
-      
-      const listas = new Set();
-      snapshot.docs.forEach(doc => {
-        const listaMaterial = doc.data().listaMaterial;
-        if (listaMaterial) {
-          listas.add(listaMaterial);
+// Objeto exportado com as operações de banco de dados
+export const DBOperations = {
+  /**
+   * Salva um novo pedido no Realtime Database.
+   * @param {string} clienteNome - O nome do cliente.
+   * @param {string} tipoProjeto - O tipo do projeto.
+   * @param {object} dadosPedido - Os dados do pedido a serem salvos.
+   * @returns {Promise<string>} - Uma promessa que resolve com a chave (ID) do novo pedido.
+   */
+  salvarPedido: function(clienteNome, tipoProjeto, dadosPedido) {
+    return new Promise((resolve, reject) => {
+      try {
+        if (!clienteNome || !tipoProjeto) {
+          throw new Error("Cliente e Tipo de Projeto são obrigatórios.");
         }
-      });
 
-      return Array.from(listas);
-    } catch (error) {
-      console.error('Erro ao buscar listas de materiais:', error);
-      throw error;
-    }
+        // Constrói o caminho no banco de dados
+        const caminho = `${clienteNome}/${tipoProjeto}`;
+        const dbRef = ref(database, caminho);
+
+        // Adiciona um timestamp do servidor aos dados
+        const dadosComTimestamp = {
+          ...dadosPedido,
+          dataCriacao: serverTimestamp() // Usa o timestamp do servidor do Realtime Database
+        };
+
+        // Cria uma nova referência com um ID único
+        const novoPedidoRef = push(dbRef);
+        
+        // Salva os dados na nova referência
+        set(novoPedidoRef, dadosComTimestamp)
+          .then(() => {
+            console.log("Pedido salvo com sucesso! ID:", novoPedidoRef.key);
+            resolve(novoPedidoRef.key); // Resolve a promessa com o ID do novo pedido
+          })
+          .catch((error) => {
+            console.error("Erro ao salvar no DB:", error);
+            reject(error);
+          });
+      } catch (error) {
+        console.error("Erro ao tentar salvar pedido:", error);
+        reject(error);
+      }
+    });
   }
+  // Outras funções de DB (buscar, atualizar, deletar) podem ser adicionadas aqui no futuro.
 };
 
-// Exportar para uso global
-window.FirebaseService = FirebaseService;
+// Para compatibilidade, se algum código antigo ainda usar a variável global.
+// Idealmente, isso seria removido após a refatoração completa.
+window.DBOperations = DBOperations;

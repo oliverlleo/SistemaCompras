@@ -1,3 +1,5 @@
+import { DBOperations } from './firebase-config.js';
+
 // Gerenciador do Dashboard Principal
 class DashboardManager {
   constructor() {
@@ -1430,10 +1432,27 @@ class DashboardManager {
         this.showNotification(mensagem, 'success');
       } else {
         // Modo criação - criar novo pedido
-        // Sempre definir o status como Pendente de Análise para pedidos novos
         formData.statusGeral = 'Pendente de Análise';
-        pedidoId = await FirebaseService.salvarPedido(formData);
-        this.showNotification('Pedido cadastrado com sucesso!', 'success');
+
+        // Usar a nova função modular
+        DBOperations.salvarPedido(formData.clienteNome, formData.tipoProjeto, formData)
+          .then(newPedidoId => {
+            pedidoId = newPedidoId;
+            this.showNotification('Pedido cadastrado com sucesso!', 'success');
+
+            // A lógica de salvar itens foi movida para dentro da função salvarPedido
+            // e os itens são passados como parte de `formData`.
+            // Se houver lógica adicional necessária após o salvamento, ela iria aqui.
+
+            // Fechar modal e atualizar lista
+            this.closeModal();
+            this.refreshData();
+          })
+          .catch(error => {
+            console.error('Erro ao salvar pedido:', error);
+            this.showNotification('Erro ao salvar pedido: ' + error.message, 'error');
+          });
+        return; // Sair da função aqui pois o resto é tratado no .then()
       }
       
       // Salvar itens (novos ou atualizados) se não for terceirizado

@@ -1,12 +1,13 @@
-// Configuração do Firebase
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyC38MEJFXKITFrrGkwxmyotgD1mCBVctc4",
-  authDomain: "compras-e492e.firebaseapp.com",
-  projectId: "compras-e492e",
-  storageBucket: "compras-e492e.firebasestorage.app",
-  messagingSenderId: "887834963114",
-  appId: "1:887834963114:web:7cc2a590d840eb95fbb4d3",
-  measurementId: "G-C95FD8WQQ9"
+  apiKey: "AIzaSyC2Zi40wsyBoTeXb2syXvrogTb56lAVjk0",
+  authDomain: "pcp-2e388.firebaseapp.com",
+  databaseURL: "https://pcp-2e388-default-rtdb.firebaseio.com",
+  projectId: "pcp-2e388",
+  storageBucket: "pcp-2e388.firebasestorage.app",
+  messagingSenderId: "725540904176",
+  appId: "1:725540904176:web:5b60009763c36bb12d7635",
+  measurementId: "G-G4S09PBEFB"
 };
 
 // Inicializar Firebase

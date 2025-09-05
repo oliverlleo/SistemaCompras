@@ -25,7 +25,6 @@ class RecebimentoFinalManager {
 
         // Estado da aplicação
         this.itensPendentes = [];
-        this.originalCarregarItensPendentes = null;
         this.originalRenderizarTabela = null;
         this.originalSalvarRecebimento = null;
         this.originalPreencherTabelaRecebimento = null;
@@ -86,7 +85,6 @@ class RecebimentoFinalManager {
         console.log('🔧 Estendendo funcionalidades do RecebimentoManager...');
         
         // Salvar referências aos métodos originais
-        this.originalCarregarItensPendentes = this.recebimentoOriginal.carregarItensPendentes.bind(this.recebimentoOriginal);
         this.originalRenderizarTabela = this.recebimentoOriginal.renderizarTabela.bind(this.recebimentoOriginal);
         this.originalSalvarRecebimento = this.recebimentoOriginal.salvarRecebimento.bind(this.recebimentoOriginal);
         this.originalPreencherTabelaRecebimento = this.recebimentoOriginal.preencherTabelaRecebimento.bind(this.recebimentoOriginal);
@@ -405,47 +403,34 @@ class RecebimentoFinalManager {
      */
     async carregarItensCombinados() {
         try {
-            console.log('🚀 Iniciando carregamento de itens combinados...');
+            console.log('🚀 Iniciando carregamento de itens combinados (versão corrigida)...');
             this.recebimentoOriginal.mostrarLoading();
 
-            // Primeiro, carregar itens da compra inicial usando o método simplificado
-            console.log('📦 Carregando itens da compra inicial...');
-            await this.originalCarregarItensPendentes();
+            // 1. Limpar explicitamente o array principal para evitar duplicatas.
+            this.recebimentoOriginal.itensPendentes = [];
+            console.log('🧹 Array de itens pendentes limpo.');
+
+            // 2. Carregar itens da compra inicial diretamente no array limpo.
+            // Usamos a função de baixo nível do manager original para evitar chamar a função de alto nível que estamos substituindo.
+            await this.recebimentoOriginal.carregarItensCompraInicial();
             console.log(`✅ ${this.recebimentoOriginal.itensPendentes.length} itens da compra inicial carregados`);
 
-            // Marcar apenas os itens que ainda não têm tipoCompra como "Inicial"
+            // Marcar itens como 'Inicial'
             this.recebimentoOriginal.itensPendentes.forEach(item => {
                 if (!item.tipoCompra) {
                     item.tipoCompra = 'Inicial';
                 }
             });
 
-            // Buscar itens da compra final
-            console.log('🔍 Buscando itens da compra final...');
+            // 3. Carregar itens da compra final em uma lista separada.
             const itensCompraFinal = await this.carregarItensCompraFinal();
             console.log(`✅ ${itensCompraFinal.length} itens da compra final encontrados`);
 
-            // Combinar os arrays - permitir que o mesmo item apareça como inicial E final
-            // Isso é correto pois um item pode ter compra inicial e depois compra final adicional
-            const totalAntes = this.recebimentoOriginal.itensPendentes.length;
-            this.recebimentoOriginal.itensPendentes = [...this.recebimentoOriginal.itensPendentes, ...itensCompraFinal];
-            const totalDepois = this.recebimentoOriginal.itensPendentes.length;
-            
-            console.log(`🔄 Combinação concluída: ${totalAntes} inicial + ${itensCompraFinal.length} final = ${totalDepois} total`);
+            // 4. Combinar as duas listas.
+            this.recebimentoOriginal.itensPendentes.push(...itensCompraFinal);
+            console.log(`🔄 Combinação concluída. Total de itens: ${this.recebimentoOriginal.itensPendentes.length}`);
 
-            // Se não há itens, verificar se há dados de demonstração
-            if (this.recebimentoOriginal.itensPendentes.length === 0) {
-                console.log('⚠️ Nenhum item pendente encontrado. Sugerindo criar dados de demonstração...');
-                const mensagemConsole = `
-                    Para criar dados de demonstração, execute no console:
-                    - window.criarDadosDemonstracao() - Itens de compra inicial
-                    - window.criarDadosDemonstracaoFinal() - Itens de compra final
-                `;
-                console.log(mensagemConsole);
-            }
-
-            // Aplicar filtros e atualizar visualização
-            console.log('🎨 Aplicando filtros e atualizando visualização...');
+            // 5. Aplicar filtros e renderizar a tabela e o calendário.
             this.recebimentoOriginal.aplicarFiltros();
             this.recebimentoOriginal.gerarCalendarioSemanal();
 

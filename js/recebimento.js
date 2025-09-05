@@ -1522,6 +1522,8 @@ class RecebimentoManager {
                 'Cliente': item.clienteNome,
                 'Código': item.codigo,
                 'Descrição': item.descricao,
+                'Cor': item.cor,
+                'Medida': item.medida,
                 'Quantidade Recebida': item.qtdRecebida,
                 'Fornecedor': item.fornecedor,
                 'Projeto': item.tipoProjeto,
@@ -1645,6 +1647,8 @@ class RecebimentoManager {
                             id: doc.id,
                             codigo: item.codigo || 'N/D',
                             descricao: item.descricao || item.produtoDescricao || 'N/D',
+                            cor: item.cor || 'N/D',
+                            medida: item.medida || 'N/D',
                             clienteNome: clienteNome,
                             tipoProjeto: tipoProjeto,
                             listaMaterial: item.listaMaterial || 'N/D',
@@ -1790,6 +1794,12 @@ class RecebimentoManager {
                     </td>
                     <td class="px-4 py-3 text-sm text-gray-700">
                         ${item.descricao}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-700">
+                        ${item.cor}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-700">
+                        ${item.medida}
                     </td>
                     <td class="px-4 py-3 text-sm font-semibold text-gray-900">
                         ${this.formatarQuantidade(item.qtdRecebida)}
